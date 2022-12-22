@@ -1,4 +1,18 @@
+Ssy= Nombre de shell remain par site et année
+uisy= Nombre moyen attendu de shell remain par individu i pour l'année y et le site s
+Ssy~ Poisson (T * uisy)
+On modélise la moyenne de la distribution par une loi linéaire avec fonction de lien log
+
 model le + complet :
+log (uisy) = a0 + a1 P + Es + log (A)
+  a0 : intercept
+  a1: pente de l'effet fixe de la prévalence
+  Es: random effect du site 
+  log(A): offset de l'aire 
+  
+
+model le + complet :
+
 
 shells ~ prev + site (rd) + year (fx) + log (area)  <- modèle complet
 
