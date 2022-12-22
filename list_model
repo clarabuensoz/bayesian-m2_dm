@@ -5,11 +5,49 @@ On modélise la moyenne de la distribution par une loi linéaire avec fonction d
 
 model le + complet :
 log (uisy) = a0 + a1 P + Es + log (A)
-  a0 : intercept
-  a1: pente de l'effet fixe de la prévalence (=covariate)
-  Es: random effect du site 
-  log(A): offset de l'aire 
+Es~ N(mu.es,tau.es) #tau.es = 1/variance=sigma.es²
+  #Explication des paramètres: 
+    a0 : intercept
+    a1: pente de l'effet fixe de la prévalence (=covariate)
+    Es: random effect du site 
+    log(A): offset de l'aire 
   
+    #Priors:
+      a0~ N(0,sd=10)    a0~ N(0,sd=100)    a0~ N(0,sd=1000)
+      a1~ N(0,sd=10)    a1~ N(0,sd=100)    a1~ N(0,sd=1000)
+      mu.es~N(0,sd=1000)
+      tau.es <- 1 / (sigma.es * sigma.es)
+      sigma.es~N(0,sd=1000)
+      
+      
+      
+      
+      # partial pooling model
+partial_pooling <- function(){
+  # likelihood
+  for(i in 1:n){
+    y[i] ~ dnorm(mu[i], tau.y)
+    mu[i] <- a[species[i]] + b * x[i] #neested indexing
+  }
+  for (j in 1:nbspecies){
+    a[j] ~ dnorm(mu.a, tau.a)
+  } #code pour random effect ça
+  # priors
+  tau.y <- 1 / (sigma.y * sigma.y)
+  sigma.y ~ dunif(0,100)
+  mu.a ~ dnorm(0,0.001)
+  tau.a <- 1 / (sigma.a * sigma.a)
+  sigma.a ~ dunif(0,100)
+  b ~ dnorm(0,0.001)
+}
+      
+      
+      
+      
+      
+      
+      
+      
 
 model 1 :
 log (uisy) = a0 
