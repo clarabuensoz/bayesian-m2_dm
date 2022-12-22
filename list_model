@@ -6,13 +6,56 @@ On modélise la moyenne de la distribution par une loi linéaire avec fonction d
 model le + complet :
 log (uisy) = a0 + a1 P + Es + log (A)
   a0 : intercept
-  a1: pente de l'effet fixe de la prévalence
+  a1: pente de l'effet fixe de la prévalence (=covariate)
   Es: random effect du site 
   log(A): offset de l'aire 
   
 
-model le + complet :
+model 1 :
+log (uisy) = a0 
 
+model 1bis =
+
+  log (uisy) = a0 + log (A) 
+
+model 2=
+
+  log (uisy) = a0 + a1 P 
+
+model 2bis=
+  log (uisy) = a0 + a1 P + log (A)
+ 
+model 3=
+
+  log (uisy) = a0 + Es
+
+model 3bis=
+
+  log (uisy) = a0 + Es + log (A)
+     
+model 4=
+
+  log (uisy) = a0 + a1P + Es 
+
+model 4bis =
+
+  log (uisy) = a0 + a1P + Es + log (A)
+  
+  
+Bonus: 
+model 5=
+
+  log (uisy) = a0 + a1P + a2 S
+  
+model 5bis=
+
+  log (uisy) = a0 + a1P + a2 S  + log (A)
+  
+  
+  
+Autres idées: effet random de l'année + indi
+  
+  
 
 shells ~ prev + site (rd) + year (fx) + log (area)  <- modèle complet
 
