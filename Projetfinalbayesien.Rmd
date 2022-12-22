@@ -9,22 +9,112 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+## Library 
+```{r}
+library(ggplot2)
+library(R2jags)
 ```
 
-## Including Plots
+## Data
+```{r}
 
-You can also embed plots, for example:
+setwd("C:/Users/orian/OneDrive/Documents/bayesian-m2_dm")
+data<-read.csv2("gopher.csv")
+str(data)
+data$prev<-as.numeric(data$prev)
+data$Area<-as.numeric(data$Area)
+data$Site<-as.factor(data$Site)
+#data$year<-as.numeric(data$year)
+data$density<-as.numeric(data$density)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Part 1:  Lecture, exploration des données
+Lisez les données, et assurez vous que les variables sont au bon format. Calculez des statistiques descriptives des données, et proposez des visualisations graphiques. Commentez ce que vous retenez de l'exploration des données.
+
+```{r}
+plot(density(data$prev))
+hist(data$prev)
+hist(data$shell)
+plot(data$prev,data$shell)
+plot(data$year,data$shell)
+plot(data$prev,data$density)
+```
+# Part 2 : Models
+## Data
+```{r}
+# Define numeric vector for the factor Site
+Site<-as.numeric(data$Site)
+# Define response variable : shell remains count
+y<-data$shells
+# Standardize explanatory variables
+x<-(data$prev - mean(data$prev))/sd(data$prev)
+#mean(x)
+#sd(x)
+#hist(x)
+
+```
+##Model 1
+Y~ Poisson (T * u)
+log (u) = a0 
+Prior:
+  a0~ N(0,sd=10)
+  
+```{r}
+#Create dataframe of data for this model:
+mydata<-list(y=y,n=length(y),N=120)
+```
+
+
+### Write the model:
+```{r}
+model_1<-function(){
+  # likelihood
+  for(i in 1:n){
+    y[i] ~ dpois(lambda[i]) #likelihood
+    lambda[i]<-N*u[i]
+    log(u[i]) <- a0
+  }
+  # priors
+  a0 ~ dnorm(0,0.1) # sd=10
+}
+```
+
+
+### Specify info to Jags
+Initial values:
+We specify the initial values for 3 markov chains:
+```{r}
+init1 <- list(a0 = -4)
+init2 <- list(a0 = -3)
+init3 <- list(a0 = -2)
+init <- list(init1,init2,init3)
+```
+
+Parameters to monitor :
+```{r}
+params <- c("a0")
+```
+
+### Fit the model with Jags
+```{r}
+model1_fit <- jags(data = mydata,
+                             inits = init,
+                             parameters.to.save = params,
+                             model.file = model_1,
+                             n.chains = 3,
+                             n.iter = 6000,
+                             n.burnin = 3000,
+                             n.thin = 1)
+```
+
+```{r}
+model1_fit
+```
+```{r}
+# have a look to posterior distribution
+hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
+plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
+```
