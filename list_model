@@ -1,0 +1,12 @@
+model le + complet :
+
+shells ~ prev + site (rd) + year (fx) + log (area)  <- modèle complet
+
+shell ~
+
+
+
+
+
+
+shells /idv/année/site = Siys
