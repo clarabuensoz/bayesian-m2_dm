@@ -1277,6 +1277,52 @@ plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
 
+
+## Part 2: more graph and test for model validation of Model2_bis and model4_bis (same as part assessing convergence for each model but with more beautiful graph)
+### Chaine mixing et model validation::
+Comparons 
+Model 2_bis 
+Modèle 4_bis 
+
+```{r}
+plot(as.mcmc(model2_bis_fit))
+plot(as.mcmc(model4_bis_fit))
+```
+Les chaines semblent well mixted et stable pour le modèle 2bis_fit.
+
+### Test autocorrelation (déjà fait plus haut juste  autre méthode)
+```{r}
+autocorr.diag(as.mcmc(model2_bis_fit))
+autocorr.diag(as.mcmc(model4_bis_fit))
+```
+Seems ok.
+
+
+
+### Test résidus pour model2_bis
+One very important model validation procedure is to examine a plot of residuals against predicted or fitted values (the residual plot). Ideally, residual plots should show a random scatter of points without outliers. That is, there should be no patterns in the residuals. Patterns suggest inappropriate linear predictor (or scale) and/or inappropriate residual distribution/link function.
+```{r}
+mydata<-list(y=y,x=x,n=length(y),N=120,A=A)
+coefs <- model2_bis_fit$BUGSoutput$sims.matrix[,1:2]
+Xmat <- model.matrix(~x, data=mydata)
+#expected values on a log scale
+eta<-coefs %*% t(Xmat)
+#expected value on response scale
+lambda <- exp(eta)
+#Expected value and variance are both equal to lambda
+expY <- varY <- lambda
+#sweep across rows and then divide by lambda
+Resid <- -1*sweep(expY,2,dat$y,'-')/sqrt(varY)
+#plot residuals vs expected values
+plot(apply(Resid,2,mean)~apply(eta,2,mean))
+```
+On a l'air de voir des patterns vers la gauche ? ce qui n'est pas idéal.
+
+
+
+
+
+
 ## Part 2: Model Selection: WAIC criterion
 ```{r}
 waic_save
@@ -1284,5 +1330,49 @@ model_DIC<-c(model1_fit$BUGSoutput$DIC,model1_bis_fit$BUGSoutput$DIC,model2_fit$
 CRITERIA_modelselection<-cbind(waic_save,model_DIC)
 ```
 
+Model 2_bis semble être le mieux fit au data selon les critères. 
+Modèle 4_bis est assez proche également.
+
+## Part 1/2: look for overdipersion:
+Poisson regression: hypothèse de base est que variance=mean. Donc dispersion = 1.
+
+Explore potential for overdispersion in data:
+Source: https://www.flutterbys.com.au/stats/tut/tut10.6b.html
+
+```{r}
+boxplot(data$shells, horizontal=TRUE)
+rug(jitter(data$shells), side=1)
+hist(data$shell)
+```
+Il semble y avoir beaucoup de 0 dans les données = potentiel overdispersion.
+Explore zero inflation:
+
+```{r}
+#proportion of 0's in the data
+dat.tab<-table(data$shell==0)
+dat.tab/sum(dat.tab)
+
+#Proportion of 0's expected from a Poisson distribution
+mu <- mean(data$shells)
+cnts <- rpois(1000, mu)
+dat.tab <- table(cnts == 0)
+dat.tab/sum(dat.tab)
+```
+The value under TRUE is the proportion of zero value in the data.
+The proportion of the value is the data do not correspond to the low proportion expected for a poisson distribution.
+
+
+
+
+
+
 To do: 
-- Vérifier la convergence pour tous les modèles ET n.eff
+- Faire graphiques pour Result
+
+## Result of model 2bis visualization
+
+```{r}
+
+
+
+```
