@@ -540,8 +540,8 @@ waic_save<-rbind(waic_save,waic)
 
 ```{r}
 # have a look to posterior distribution
-hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
-plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
+hist(model2_bis_fit$BUGSoutput$sims.matrix[,"a0"])
+plot(density(model2_bis_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
 
@@ -1361,6 +1361,12 @@ dat.tab/sum(dat.tab)
 The value under TRUE is the proportion of zero value in the data.
 The proportion of the value is the data do not correspond to the low proportion expected for a poisson distribution.
 
+```{r}
+#summary(model2_bis_fit)
+library(BayesianTools)
+Samples<-coda.samples(model2_bis_fit$model,variable.names = params, n.iter = 5000)
+x = BayesianTools::getSample(Samples)
+```
 
 
 
