@@ -1123,9 +1123,9 @@ plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
 
-### Model 5_bis
+### Model 5_bis - DO NOT CONVERGE - PROBLEM - TO DELETE
 Y~ Poisson (T * u)
-log (u) = a0 + Es + a1*P+ log(A)
+log (u) = a0 + Es + Ey + a1*P+ log(A)
 Prior:
   a0~ N(0,sd=10)
   a1~ N(0,sd=10)
@@ -1133,33 +1133,47 @@ Prior:
       mu.es~N(0,sd=10)
       tau.es <- 1 / (sigma.es * sigma.es)
       sigma.es~Unif(0,100)
+  Ey~ N(mu.y,tau.y) #tau.es = 1/variance=sigma.ey²
+      mu.y~N(0,sd=10)
+      tau.y <- 1 / (sigma.y * sigma.y)
+      sigma.es~Unif(0,100)
   
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
 nbsites<-length(unique(data$Site))
 sites<-as.numeric(data$Site)
-mydata<-list(y=y,x=x,n=length(y),N=120,A=A,nbsites=nbsites,sites=sites)
+yearID<-data %>% group_by(year)%>% mutate(year_id = cur_group_id())
+yearID<-yearID$year_id
+nbyear<-length(unique(data$year))
+mydata<-list(y=y,x=x,n=length(y),N=120,A=A,nbsites=nbsites,sites=sites,year=yearID,nbyear=nbyear)
 ```
 
 
 #### Write the model:
 ```{r}
-model_4_bis<-function(){
+model_5_bis<-function(){
   # likelihood
   for(i in 1:n){
     y[i] ~ dpois(lambda[i]) #likelihood
     lambda[i]<-N*u[i]
-    log(u[i]) <- a[sites[i]] + a1*x[i] + log(A[i]) 
+    log(u[i]) <- a[sites[i]] +ab[year[i]] + a1*x[i] + log(A[i]) 
   }
   for(j in 1:nbsites){
     a[j] ~ dnorm(mu.a,tau.a)
+  } # For random effect of site
+  for(f in 1:nbyear){
+    ab[f] ~ dnorm(mu.y,tau.y)
   } # For random effect of site
   # priors
   a1 ~ dnorm(0,0.1)
   mu.a ~ dnorm(0,0.1)
   tau.a <- 1 / (sigma.a * sigma.a)
   sigma.a ~ dunif(0,100)
+  
+  mu.y ~ dnorm(0,0.1)
+  tau.y <- 1 / (sigma.y * sigma.y)
+  sigma.y ~ dunif(0,100)
 }
 ```
 
@@ -1168,46 +1182,46 @@ model_4_bis<-function(){
 Initial values:
 We specify the initial values for 3 markov chains:
 ```{r}
-init1 <- list(mu.a=1,sigma.a=0.5,a1=0)
-init2 <- list(mu.a=-3,sigma.a=1.5,a1=1)
-init3 <- list(mu.a=2,sigma.a=1,a1=0.5)
+init1 <- list(mu.a=-4,sigma.a=0.5,a1=0,mu.y=1,sigma.y=0.5)
+init2 <- list(mu.a=-3,sigma.a=1.5,a1=1,mu.y=-3,sigma.y=1.5)
+init3 <- list(mu.a=-1,sigma.a=1,a1=0.5,mu.y=-2,sigma.y=3)
 init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
 ```{r}
-params <- c("mu.a","sigma.a","a1")
+params <- c("mu.a","sigma.a","a1","mu.y","sigma.y")
 ```
 
 #### Fit the model with Jags
 ```{r}
-model4_bis_fit <- jags(data = mydata,
+model5_bis_fit <- jags(data = mydata,
                              inits = init,
                              parameters.to.save = params,
-                             model.file = model_4_bis,
+                             model.file = model_5_bis,
                              n.chains = 3,
-                             n.iter = 10000,
+                             n.iter = 6000,
                              n.burnin = 3000,
-                             n.thin = 10)
+                             n.thin = 1)
 ```
 
 
 
 ```{r}
-model4_bis_fit
+model5_bis_fit
 ```
 
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
 ```{r}
-traceplot(model4_bis_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a","a1"),ask=FALSE)
+traceplot(model5_bis_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a","a1","mu.y","sigma.y"),ask=FALSE)
 ````
 
 Le mixage semble ok.
 
 ````{r}
-autocorr.plot(as.mcmc(model4_bis_fit),ask=FALSE)
+autocorr.plot(as.mcmc(model5_bis_fit),ask=FALSE)
 ````
 Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelation. Je décide d'augmenter le nombre d'itération à 10000 et thinnning de 10.
 
@@ -1220,7 +1234,7 @@ Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
 ```{r}
-model4_bis_fit
+model5_bis_fit
 ```
 ###### Rhat: détecte si problème de convergence
 
@@ -1236,7 +1250,7 @@ Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence.
 
 #### Model selection: Compute WAIC criterion
 ```{r}
-samples <- jags.samples(model4_bis_fit$model,c("WAIC","deviance"), type = "mean",
+samples <- jags.samples(model5_bis_fit$model,c("WAIC","deviance"), type = "mean",
 n.iter = 6000,
 n.burnin = 3000,
 n.thin = 1)
@@ -1245,13 +1259,13 @@ samples$p_waic <- samples$WAIC #number of parameters
 samples$waic <- samples$deviance + samples$p_waic
 tmp <- sapply(samples, sum)
 waic <- round(c(waic = tmp[["waic"]], p_waic = tmp[["p_waic"]],deviance = tmp[["deviance"]]),1)
-waic$Modelname<-"model4_bis"
-waic$prior<-" mu.a~N(0,sd=10) // tau.a <- 1 / (sigma.a * sigma.a) //sigma.a~Unif(0,100)// a1~ N(0,sd=10) "
+waic$Modelname<-"model5_bis"
+waic$prior<-" mu.a~N(0,sd=10) // tau.a <- 1 / (sigma.a * sigma.a) //sigma.a~Unif(0,100)// a1~ N(0,sd=10) mu.y~N(0,sd=10) // tau.y <- 1 / (sigma.y * sigma.y) //sigma.y~Unif(0,100)//"
 
 
 # Save the result:
 waic<-as.data.frame(waic)
-waic_save<-rbind(waic_save,waic)
+#waic_save<-rbind(waic_save,waic)
                      
 ```
 #### The results: look to posterior distributions
