@@ -15,35 +15,68 @@ Article: Upper respiratory tract disease, force of infection, and effects on sur
 ## Libraries 
 ```{r}
 library(ggplot2)
-library(R2jags)
+library(dplyr)
+install.packages("rjags")
+library(rjags)
 ```
 
-## Data
-```{r}
-
-setwd("C:/Users/orian/OneDrive/Documents/bayesian-m2_dm")
-data<-read.csv2("gopher.csv")
-str(data)
-data$prev<-as.numeric(data$prev)
-data$Area<-as.numeric(data$Area)
-data$Site<-as.factor(data$Site)
-#data$year<-as.numeric(data$year)
-data$density<-as.numeric(data$density)
-data$taillepop<-data$density*data$Area
-taillepop<-data$taillepop
-
-```
 
 ## Part 1:  Lecture, exploration des données
 Lisez les données, et assurez vous que les variables sont au bon format. Calculez des statistiques descriptives des données, et proposez des visualisations graphiques. Commentez ce que vous retenez de l'exploration des données.
 
+### Mise en forme des données
+
 ```{r}
-plot(density(data$prev))
-hist(data$prev)
-hist(data$shell)
-plot(data$prev,data$shell)
-plot(data$year,data$shell)
-plot(data$prev,data$density)
+
+setwd("C:/Users/clarr/Documents/GitHub/bayesian-m2_dm")
+data<-read.csv2("gopher.csv")
+str(data)
+data$prev<-as.numeric(data$prev)
+data$Area<-as.numeric(data$Area)
+data$year<-as.numeric(data$year)
+data$density<-as.numeric(data$density)
+data$taillepop<-data$density*data$Area
+taillepop<-data$taillepop
+names(data)[1]<-"Site"
+
+```
+
+Comme les auteurs le font remarquer dans leur article, les données sont peu nombreuses.
+
+```{r}
+#plot(density(data$prev))
+
+#plot(data$prev,data$shell)
+#plot(data$prev,data$density)
+
+ggplot(data, aes(x=Site, y=shells/taillepop, fill=Site)) + 
+  geom_boxplot(show.legend = F)+
+  labs(title="Figure 1 : Shells per individual at each site", 
+       x="Sites",
+       y="Shell per individual")+
+  theme_bw()
+```
+
+
+
+
+```{r}
+ggplot(data, aes(x=Site, y=prev, fill=Site)) + 
+  geom_boxplot(show.legend = F)+
+  labs(title="Figure 2 : Mycoplasma agassizii seroprevalence at each site", 
+       x="Sites",
+       y="Seroprevalence")+
+  theme_bw()
+
+
+ggplot(data, aes(x=prev, y=shells/taillepop, color=year)) + 
+  geom_point(show.legend = T, size=6)+
+   labs(title="Figure 3 : Shell remains per individual for each year of the study along Mycoplasma agassizii seroprevalence", 
+       x="Seroprevalence",
+       y="Shell per individual")+
+  theme_bw()
+  
+
 ```
 
 ## Part 2 : Models implementation
@@ -66,7 +99,11 @@ Y~ Poisson (T * u)
 log (u) = a0 
 Prior:
   a0~ N(0,sd=10)
-  
+
+Avec :
+ - Y = nombre de carapaces
+ - T = taille de la population
+ - a0 = intercept =
 ```{r}
 #Create dataframe of data for this model:
 mydata<-list(y=y,n=length(y),N=taillepop)
