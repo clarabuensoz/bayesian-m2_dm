@@ -275,8 +275,8 @@ Initial values:
 We specify the initial values for 3 markov chains:
 ```{r}
 init1 <- list(a0 = -4,a1=0)
-init2 <- list(a0 = -3,a1=0)
-init3 <- list(a0 = -2,a1=0)
+init2 <- list(a0 = -3,a1=1)
+init3 <- list(a0 = -2,a1=-1)
 init <- list(init1,init2,init3)
 ```
 
@@ -369,8 +369,8 @@ Initial values:
 We specify the initial values for 3 markov chains:
 ```{r}
 init1 <- list(a0 = -4,a1=0)
-init2 <- list(a0 = -3,a1=0)
-init3 <- list(a0 = -2,a1=0)
+init2 <- list(a0 = -3,a1=1)
+init3 <- list(a0 = -2,a1=-1)
 init <- list(init1,init2,init3)
 ```
 
@@ -429,32 +429,43 @@ plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 
 
 
-### Model 3
+### Model 3_bis
 Y~ Poisson (T * u)
-log (u) = a0 + a1 P + log(A)
+log (u) = a0 + Es + log(A)
 Prior:
   a0~ N(0,sd=10)
-  a1~ N(0,sd=10)
+  Es~ N(mu.es,tau.es) #tau.es = 1/variance=sigma.es²
+  mu.es~N(0,sd=1000)
+      tau.es <- 1 / (sigma.es * sigma.es)
+      sigma.es~N(0,sd=1000)
   
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
-mydata<-list(y=y,x=x,n=length(y),N=120,A=A)
+nbsites<-length(unique(data$Site))
+sites<-as.numeric(data$Site)
+mydata<-list(y=y,x=x,n=length(y),N=120,A=A,nbsites=nbsites,sites=sites)
 ```
 
 
 ### Write the model:
 ```{r}
-model_2_bis<-function(){
+model_3_bis<-function(){
   # likelihood
   for(i in 1:n){
     y[i] ~ dpois(lambda[i]) #likelihood
     lambda[i]<-N*u[i]
-    log(u[i]) <- a0 + a1*x[i]+ log(A[i])
+    log(u[i]) <- a0[sites[i]] + log(A[i]) # + a1*x[i]
+  }
+  for(j in 1:nbsites){
+    a0[j] ~ dnorm(mu.a0, tau.a0)
   }
   # priors
   a0 ~ dnorm(0,0.1) # sd=10
-  a1 ~ dnorm(0,0.1) 
+  #a1 ~ dnorm(0,0.1)
+  mu.a0 ~ dnorm(0,0.1)
+  tau.a0 <- 1 / (sigma.a0 * sigma.a0)
+  sigma.a0 ~ dunif(0,100)
 }
 ```
 
@@ -463,15 +474,15 @@ model_2_bis<-function(){
 Initial values:
 We specify the initial values for 3 markov chains:
 ```{r}
-init1 <- list(a0 = -4,a1=0)
-init2 <- list(a0 = -3,a1=0)
-init3 <- list(a0 = -2,a1=0)
+init1 <- list(a0 = -4,mu.a0=1,sigma.a0=0.5)
+init2 <- list(a0 = -3,mu.a0=-1,sigma.a0=0)
+init3 <- list(a0 = -2,mu.a0=2,sigma.a0=-0.5)
 init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
 ```{r}
-params <- c("a0","a1")
+params <- c("a0","mu.a0","sigma.a0")
 ```
 
 ### Fit the model with Jags
