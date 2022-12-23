@@ -524,7 +524,7 @@ samples <- jags.samples(model2_bis_fit$model,c("WAIC","deviance"), type = "mean"
 n.iter = 6000,
 n.burnin = 3000,
 n.thin = 1)
-samples$p_waic <- samples$WAIC #number of parameters
+samples$p_waic <- samples$WAIC #Close to number of parameters but not really
 # Calculate the true AIC:
 samples$waic <- samples$deviance + samples$p_waic
 tmp <- sapply(samples, sum)
@@ -1123,14 +1123,151 @@ plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
 
+### Model 5_bis
+Y~ Poisson (T * u)
+log (u) = a0 + Es + a1*P+ log(A)
+Prior:
+  a0~ N(0,sd=10)
+  a1~ N(0,sd=10)
+  Es~ N(mu.es,tau.es) #tau.es = 1/variance=sigma.es²
+      mu.es~N(0,sd=10)
+      tau.es <- 1 / (sigma.es * sigma.es)
+      sigma.es~Unif(0,100)
+  
+```{r}
+#Create dataframe of data for this model:
+A<-as.numeric(data$Area)
+nbsites<-length(unique(data$Site))
+sites<-as.numeric(data$Site)
+mydata<-list(y=y,x=x,n=length(y),N=120,A=A,nbsites=nbsites,sites=sites)
+```
+
+
+#### Write the model:
+```{r}
+model_4_bis<-function(){
+  # likelihood
+  for(i in 1:n){
+    y[i] ~ dpois(lambda[i]) #likelihood
+    lambda[i]<-N*u[i]
+    log(u[i]) <- a[sites[i]] + a1*x[i] + log(A[i]) 
+  }
+  for(j in 1:nbsites){
+    a[j] ~ dnorm(mu.a,tau.a)
+  } # For random effect of site
+  # priors
+  a1 ~ dnorm(0,0.1)
+  mu.a ~ dnorm(0,0.1)
+  tau.a <- 1 / (sigma.a * sigma.a)
+  sigma.a ~ dunif(0,100)
+}
+```
+
+
+#### Specify info to Jags
+Initial values:
+We specify the initial values for 3 markov chains:
+```{r}
+init1 <- list(mu.a=1,sigma.a=0.5,a1=0)
+init2 <- list(mu.a=-3,sigma.a=1.5,a1=1)
+init3 <- list(mu.a=2,sigma.a=1,a1=0.5)
+init <- list(init1,init2,init3)
+```
+
+Parameters to monitor :
+```{r}
+params <- c("mu.a","sigma.a","a1")
+```
+
+#### Fit the model with Jags
+```{r}
+model4_bis_fit <- jags(data = mydata,
+                             inits = init,
+                             parameters.to.save = params,
+                             model.file = model_4_bis,
+                             n.chains = 3,
+                             n.iter = 10000,
+                             n.burnin = 3000,
+                             n.thin = 10)
+```
 
 
 
+```{r}
+model4_bis_fit
+```
+
+#### Assess convergence
+
+##### Qualitativement par des graphiques:
+```{r}
+traceplot(model4_bis_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a","a1"),ask=FALSE)
+````
+
+Le mixage semble ok.
+
+````{r}
+autocorr.plot(as.mcmc(model4_bis_fit),ask=FALSE)
+````
+Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelation. Je décide d'augmenter le nombre d'itération à 10000 et thinnning de 10.
+
+Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
+
+##### Quantitativement:
+###### N.eff : nb itérations ok pour limiter effet autocorrelation chaine
+The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
+Le critère généralement choisit est de n.eff >100.
+Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
+
+```{r}
+model4_bis_fit
+```
+###### Rhat: détecte si problème de convergence
+
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
+Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+
+-> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
+Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
+
+
+
+
+
+#### Model selection: Compute WAIC criterion
+```{r}
+samples <- jags.samples(model4_bis_fit$model,c("WAIC","deviance"), type = "mean",
+n.iter = 6000,
+n.burnin = 3000,
+n.thin = 1)
+samples$p_waic <- samples$WAIC #number of parameters
+# Calculate the true AIC:
+samples$waic <- samples$deviance + samples$p_waic
+tmp <- sapply(samples, sum)
+waic <- round(c(waic = tmp[["waic"]], p_waic = tmp[["p_waic"]],deviance = tmp[["deviance"]]),1)
+waic$Modelname<-"model4_bis"
+waic$prior<-" mu.a~N(0,sd=10) // tau.a <- 1 / (sigma.a * sigma.a) //sigma.a~Unif(0,100)// a1~ N(0,sd=10) "
+
+
+# Save the result:
+waic<-as.data.frame(waic)
+waic_save<-rbind(waic_save,waic)
+                     
+```
+#### The results: look to posterior distributions
+
+```{r}
+# have a look to posterior distribution
+hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
+plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
+```
 
 
 ## Part 2: Model Selection: WAIC criterion
 ```{r}
 waic_save
+model_DIC<-c(model1_fit$BUGSoutput$DIC,model1_bis_fit$BUGSoutput$DIC,model2_fit$BUGSoutput$DIC,model2_bis_fit$BUGSoutput$DIC,model3_fit$BUGSoutput$DIC,model3_bis_fit$BUGSoutput$DIC,model4_fit$BUGSoutput$DIC,model4_bis_fit$BUGSoutput$DIC)
+CRITERIA_modelselection<-cbind(waic_save,model_DIC)
 ```
 
 To do: 
