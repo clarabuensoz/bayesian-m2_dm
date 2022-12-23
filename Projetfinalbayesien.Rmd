@@ -29,7 +29,8 @@ data$Area<-as.numeric(data$Area)
 data$Site<-as.factor(data$Site)
 #data$year<-as.numeric(data$year)
 data$density<-as.numeric(data$density)
-
+data$taillepop<-data$density*data$Area
+taillepop<-data$taillepop
 
 ```
 
@@ -54,6 +55,7 @@ Site<-as.numeric(data$Site)
 y<-data$shells
 # Standardize explanatory variables
 x<-(data$prev - mean(data$prev))/sd(data$prev)
+
 #mean(x)
 #sd(x)
 #hist(x)
@@ -67,7 +69,7 @@ Prior:
   
 ```{r}
 #Create dataframe of data for this model:
-mydata<-list(y=y,n=length(y),N=120)
+mydata<-list(y=y,n=length(y),N=taillepop)
 ```
 
 
@@ -77,7 +79,7 @@ model_1<-function(){
   # likelihood
   for(i in 1:n){
     y[i] ~ dpois(lambda[i]) #likelihood
-    lambda[i]<-N*u[i]
+    lambda[i]<-N[i]*u[i]
     log(u[i]) <- a0
   }
   # priors
@@ -185,7 +187,7 @@ Prior:
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
-mydata<-list(y=y,n=length(y),N=120,A=A)
+mydata<-list(y=y,n=length(y),A=A,N=taillepop)
 ```
 
 
@@ -195,7 +197,7 @@ model_1_bis<-function(){
   # likelihood
   for(i in 1:n){
     y[i] ~ dpois(lambda[i]) #likelihood
-    lambda[i]<-N*u[i]
+    lambda[i]<-N[i]*u[i]
     log(u[i]) <- a0 + log(A[i])
   }
   # priors
@@ -309,7 +311,7 @@ Prior:
   
 ```{r}
 #Create dataframe of data for this model:
-mydata<-list(y=y,x=x,n=length(y),N=120)
+mydata<-list(y=y,x=x,n=length(y),N=taillepop)
 ```
 
 
@@ -319,7 +321,7 @@ model_2<-function(){
   # likelihood
   for(i in 1:n){
     y[i] ~ dpois(lambda[i]) #likelihood
-    lambda[i]<-N*u[i]
+    lambda[i]<-N[i]*u[i]
     log(u[i]) <- a0 + a1*x[i]
   }
   # priors
@@ -432,7 +434,7 @@ Prior:
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
-mydata<-list(y=y,x=x,n=length(y),N=120,A=A)
+mydata<-list(y=y,x=x,n=length(y),N=taillepop,A=A)
 ```
 
 
@@ -442,7 +444,7 @@ model_2_bis<-function(){
   # likelihood
   for(i in 1:n){
     y[i] ~ dpois(lambda[i]) #likelihood
-    lambda[i]<-N*u[i]
+    lambda[i]<-N[i]*u[i]
     log(u[i]) <- a0 + a1*x[i]+ log(A[i])
   }
   # priors
@@ -560,7 +562,7 @@ Prior:
 A<-as.numeric(data$Area)
 nbsites<-length(unique(data$Site))
 sites<-as.numeric(data$Site)
-mydata<-list(y=y,n=length(y),N=120,nbsites=nbsites,sites=sites)
+mydata<-list(y=y,n=length(y),N=taillepop,nbsites=nbsites,sites=sites)
 ```
 
 
@@ -570,7 +572,7 @@ model_3<-function(){
   # likelihood
   for(i in 1:n){
     y[i] ~ dpois(lambda[i]) #likelihood
-    lambda[i]<-N*u[i]
+    lambda[i]<-N[i]*u[i]
     log(u[i]) <- a[sites[i]]  # + a1*x[i]
   }
   for(j in 1:nbsites){
@@ -706,7 +708,7 @@ Prior:
 A<-as.numeric(data$Area)
 nbsites<-length(unique(data$Site))
 sites<-as.numeric(data$Site)
-mydata<-list(y=y,n=length(y),N=120,A=A,nbsites=nbsites,sites=sites)
+mydata<-list(y=y,n=length(y),N=taillepop,A=A,nbsites=nbsites,sites=sites)
 ```
 
 
@@ -716,7 +718,7 @@ model_3_bis<-function(){
   # likelihood
   for(i in 1:n){
     y[i] ~ dpois(lambda[i]) #likelihood
-    lambda[i]<-N*u[i]
+    lambda[i]<-N[i]*u[i]
     log(u[i]) <- a[sites[i]] + log(A[i]) # + a1*x[i]
   }
   for(j in 1:nbsites){
@@ -854,7 +856,7 @@ Prior:
 A<-as.numeric(data$Area)
 nbsites<-length(unique(data$Site))
 sites<-as.numeric(data$Site)
-mydata<-list(y=y,x=x,n=length(y),N=120,nbsites=nbsites,sites=sites)
+mydata<-list(y=y,x=x,n=length(y),N=taillepop,nbsites=nbsites,sites=sites)
 ```
 
 
@@ -864,7 +866,7 @@ model_4<-function(){
   # likelihood
   for(i in 1:n){
     y[i] ~ dpois(lambda[i]) #likelihood
-    lambda[i]<-N*u[i]
+    lambda[i]<-N[i]*u[i]
     log(u[i]) <- a[sites[i]] + a1*x[i]  
   }
   for(j in 1:nbsites){
@@ -999,7 +1001,7 @@ Prior:
 A<-as.numeric(data$Area)
 nbsites<-length(unique(data$Site))
 sites<-as.numeric(data$Site)
-mydata<-list(y=y,x=x,n=length(y),N=120,A=A,nbsites=nbsites,sites=sites)
+mydata<-list(y=y,x=x,n=length(y),N=taillepop,A=A,nbsites=nbsites,sites=sites)
 ```
 
 
@@ -1009,7 +1011,7 @@ model_4_bis<-function(){
   # likelihood
   for(i in 1:n){
     y[i] ~ dpois(lambda[i]) #likelihood
-    lambda[i]<-N*u[i]
+    lambda[i]<-N[i]*u[i]
     log(u[i]) <- a[sites[i]] + a1*x[i] + log(A[i]) 
   }
   for(j in 1:nbsites){
