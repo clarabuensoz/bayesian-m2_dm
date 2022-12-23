@@ -113,8 +113,125 @@ model1_fit <- jags(data = mydata,
 ```{r}
 model1_fit
 ```
+### Assess convergence
+Rhat
+n.eff
+
+### Model selection: Compute WAIC criterion
+```{r}
+samples <- jags.samples(model1_fit$model,c("WAIC","deviance"), type = "mean",
+n.iter = 6000,
+n.burnin = 3000,
+n.thin = 1)
+samples$p_waic <- samples$WAIC #number of parameters
+# Calculate the true AIC:
+samples$waic <- samples$deviance + samples$p_waic
+tmp <- sapply(samples, sum)
+waic <- round(c(waic = tmp[["waic"]], p_waic = tmp[["p_waic"]],deviance = tmp[["deviance"]]),1)
+waic$Modelname<-"model1"
+waic$prior<-"a0~ N(0,sd=10)"
+
+# Save the result:
+waic_save<-as.data.frame(waic)
+                     
+```
+### The results: look to posterior distributions
+
 ```{r}
 # have a look to posterior distribution
 hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
 plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
+
+
+##Model 1_bis
+Y~ Poisson (T * u)
+log (u) = a0 + log (A)
+Prior:
+  a0~ N(0,sd=10)
+  
+```{r}
+#Create dataframe of data for this model:
+A<-as.numeric(data$Area)
+mydata<-list(y=y,n=length(y),N=120,A=A)
+```
+
+
+### Write the model:
+```{r}
+model_1_bis<-function(){
+  # likelihood
+  for(i in 1:n){
+    y[i] ~ dpois(lambda[i]) #likelihood
+    lambda[i]<-N*u[i]
+    log(u[i]) <- a0 + log(A[i])
+  }
+  # priors
+  a0 ~ dnorm(0,0.1) # sd=10
+}
+```
+
+
+### Specify info to Jags
+Initial values:
+We specify the initial values for 3 markov chains:
+```{r}
+init1 <- list(a0 = -4)
+init2 <- list(a0 = -3)
+init3 <- list(a0 = -2)
+init <- list(init1,init2,init3)
+```
+
+Parameters to monitor :
+```{r}
+params <- c("a0")
+```
+
+### Fit the model with Jags
+```{r}
+model1_bis_fit <- jags(data = mydata,
+                             inits = init,
+                             parameters.to.save = params,
+                             model.file = model_1_bis,
+                             n.chains = 3,
+                             n.iter = 6000,
+                             n.burnin = 3000,
+                             n.thin = 1)
+```
+
+```{r}
+model1_bis_fit
+```
+### Assess convergence
+Rhat
+n.eff
+
+### Model selection: Compute WAIC criterion
+```{r}
+samples <- jags.samples(model1_bis_fit$model,c("WAIC","deviance"), type = "mean",
+n.iter = 6000,
+n.burnin = 3000,
+n.thin = 1)
+samples$p_waic <- samples$WAIC #number of parameters
+# Calculate the true AIC:
+samples$waic <- samples$deviance + samples$p_waic
+tmp <- sapply(samples, sum)
+waic <- round(c(waic = tmp[["waic"]], p_waic = tmp[["p_waic"]],deviance = tmp[["deviance"]]),1)
+waic$Modelname<-"model1_bis"
+waic$prior<-"a0~ N(0,sd=10)"
+# Save the result:
+waic<-as.data.frame(waic)
+waic_save<-rbind(waic_save,waic)
+                     
+```
+### The results: look to posterior distributions
+
+```{r}
+# have a look to posterior distribution
+hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
+plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
+```
+
+
+
+
