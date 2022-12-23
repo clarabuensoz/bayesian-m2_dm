@@ -131,7 +131,7 @@ autocorr.plot(as.mcmc(model1_fit),ask=FALSE)
 On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
 
 ##### Quantitativement:
-###### N.eff
+###### N.eff : nb itérations ok pour limiter effet autocorrelation chaine
 The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
@@ -139,6 +139,13 @@ Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir de
 ```{r}
 model1_fit
 ```
+###### Rhat: détecte si problème de convergence
+
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
+Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+
+-> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
+Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
 
 
 #### Model selection: Compute WAIC criterion
@@ -231,8 +238,37 @@ model1_bis_fit
 ```
 
 #### Assess convergence
-Rhat
-n.eff
+
+##### Qualitativement par des graphiques:
+```{r}
+traceplot(model1_bis_fit,mfrow=c(1,2),varname=c("a0"),ask=FALSE)
+````
+Selon ce graphique, les 3 chaines mixent bien.
+Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
+
+````{r}
+autocorr.plot(as.mcmc(model1_bis_fit),ask=FALSE)
+````
+On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
+
+##### Quantitativement:
+###### N.eff : nb itérations ok pour limiter effet autocorrelation chaine
+The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
+Le critère généralement choisit est de n.eff >100.
+Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
+
+```{r}
+model1_bis_fit
+```
+###### Rhat: détecte si problème de convergence
+
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
+Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+
+-> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
+Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
+
+
 
 #### Model selection: Compute WAIC criterion
 ```{r}
@@ -327,8 +363,37 @@ model2_fit
 ```
 
 #### Assess convergence
-Rhat
-n.eff
+
+##### Qualitativement par des graphiques:
+```{r}
+traceplot(model2_fit,mfrow=c(1,2),varname=c("a0","a1"),ask=FALSE)
+````
+Selon ce graphique, les 3 chaines mixent bien.
+Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
+
+````{r}
+autocorr.plot(as.mcmc(model2_fit),ask=FALSE)
+````
+On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
+
+##### Quantitativement:
+###### N.eff : nb itérations ok pour limiter effet autocorrelation chaine
+The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
+Le critère généralement choisit est de n.eff >100.
+Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
+
+```{r}
+model2_fit
+```
+###### Rhat: détecte si problème de convergence
+
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
+Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+
+-> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
+Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
+
+
 
 #### Model selection: Compute WAIC criterion
 ```{r}
@@ -421,8 +486,37 @@ model2_bis_fit
 ```
 
 #### Assess convergence
-Rhat
-n.eff
+
+##### Qualitativement par des graphiques:
+```{r}
+traceplot(model2_bis_fit,mfrow=c(1,2),varname=c("a0","a1"),ask=FALSE)
+````
+Selon ce graphique, les 3 chaines mixent bien.
+Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
+
+````{r}
+autocorr.plot(as.mcmc(model2_bis_fit),ask=FALSE)
+````
+On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
+
+##### Quantitativement:
+###### N.eff : nb itérations ok pour limiter effet autocorrelation chaine
+The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
+Le critère généralement choisit est de n.eff >100.
+Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
+
+```{r}
+model2_bis_fit
+```
+###### Rhat: détecte si problème de convergence
+
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
+Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+
+-> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
+Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
+
+
 
 #### Model selection: Compute WAIC criterion
 ```{r}
@@ -496,9 +590,9 @@ model_3<-function(){
 Initial values:
 We specify the initial values for 3 markov chains:
 ```{r}
-init1 <- list(mu.a=1,sigma.a=0.5)
-init2 <- list(mu.a=-3,sigma.a=1.5)
-init3 <- list(mu.a=2,sigma.a=1)
+init1 <- list(mu.a=-3,sigma.a=0.5)
+init2 <- list(mu.a=-1,sigma.a=1.5)
+init3 <- list(mu.a=-2,sigma.a=1)
 init <- list(init1,init2,init3)
 ```
 
@@ -526,8 +620,39 @@ model3_fit
 ```
 
 #### Assess convergence
-Rhat
-n.eff
+
+##### Qualitativement par des graphiques:
+```{r}
+traceplot(model3_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a"),ask=FALSE)
+````
+
+Le mixage semble ok mais pas parfait.
+
+````{r}
+autocorr.plot(as.mcmc(model3_fit),ask=FALSE)
+````
+Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelationo pour sigma. Je décide d'augmenter le nombre d'itération à 8000. J'observe même résultat.  Changer  les valeurs initiales de modifie pas non plus.
+
+Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
+
+##### Quantitativement:
+###### N.eff : nb itérations ok pour limiter effet autocorrelation chaine
+The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
+Le critère généralement choisit est de n.eff >100.
+Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
+
+```{r}
+model3_fit
+```
+###### Rhat: détecte si problème de convergence
+
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
+Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+
+-> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
+Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
+
+
 
 #### Model selection: Compute WAIC criterion
 ```{r}
@@ -629,7 +754,7 @@ model3_bis_fit <- jags(data = mydata,
                              parameters.to.save = params,
                              model.file = model_3_bis,
                              n.chains = 3,
-                             n.iter = 6000,
+                             n.iter = 10000,
                              n.burnin = 3000,
                              n.thin = 1)
 ```
@@ -641,8 +766,41 @@ model3_bis_fit
 ```
 
 #### Assess convergence
-Rhat
-n.eff
+
+##### Qualitativement par des graphiques:
+```{r}
+traceplot(model3_bis_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a"),ask=FALSE)
+````
+
+Le mixage semble ok mais pas parfait.
+
+````{r}
+autocorr.plot(as.mcmc(model3_bis_fit),ask=FALSE)
+````
+Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelationo pour sigma. Je décide d'augmenter le nombre d'itération à 10000. 
+
+On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
+Mais reste un problème sur sigma on dirait.
+
+##### Quantitativement:
+###### N.eff : nb itérations ok pour limiter effet autocorrelation chaine
+The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
+Le critère généralement choisit est de n.eff >100.
+Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
+
+```{r}
+model3_bis_fit
+```
+###### Rhat: détecte si problème de convergence
+
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
+Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+
+-> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
+Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
+
+
+
 
 #### Model selection: Compute WAIC criterion
 ```{r}
@@ -743,9 +901,9 @@ model4_fit <- jags(data = mydata,
                              parameters.to.save = params,
                              model.file = model_4,
                              n.chains = 3,
-                             n.iter = 6000,
+                             n.iter = 10000,
                              n.burnin = 3000,
-                             n.thin = 1)
+                             n.thin = 10)
 ```
 
 
@@ -755,8 +913,40 @@ model4_fit
 ```
 
 #### Assess convergence
-Rhat
-n.eff
+
+##### Qualitativement par des graphiques:
+```{r}
+traceplot(model4_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a","a1"),ask=FALSE)
+````
+
+Le mixage semble ok.
+
+````{r}
+autocorr.plot(as.mcmc(model4_fit),ask=FALSE)
+````
+Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelation. Je décide d'augmenter le nombre d'itération à 10000 et thinnning de 10.
+
+Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
+
+##### Quantitativement:
+###### N.eff : nb itérations ok pour limiter effet autocorrelation chaine
+The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
+Le critère généralement choisit est de n.eff >100.
+Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
+
+```{r}
+model4_fit
+```
+###### Rhat: détecte si problème de convergence
+
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
+Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+
+-> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
+Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
+
+
+
 
 #### Model selection: Compute WAIC criterion
 ```{r}
@@ -856,9 +1046,9 @@ model4_bis_fit <- jags(data = mydata,
                              parameters.to.save = params,
                              model.file = model_4_bis,
                              n.chains = 3,
-                             n.iter = 6000,
+                             n.iter = 10000,
                              n.burnin = 3000,
-                             n.thin = 1)
+                             n.thin = 10)
 ```
 
 
@@ -868,8 +1058,41 @@ model4_bis_fit
 ```
 
 #### Assess convergence
-Rhat
-n.eff
+
+##### Qualitativement par des graphiques:
+```{r}
+traceplot(model4_bis_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a","a1"),ask=FALSE)
+````
+
+Le mixage semble ok.
+
+````{r}
+autocorr.plot(as.mcmc(model4_bis_fit),ask=FALSE)
+````
+Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelation. Je décide d'augmenter le nombre d'itération à 10000 et thinnning de 10.
+
+Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
+
+##### Quantitativement:
+###### N.eff : nb itérations ok pour limiter effet autocorrelation chaine
+The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
+Le critère généralement choisit est de n.eff >100.
+Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
+
+```{r}
+model4_bis_fit
+```
+###### Rhat: détecte si problème de convergence
+
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
+Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+
+-> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
+Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
+
+
+
+
 
 #### Model selection: Compute WAIC criterion
 ```{r}
