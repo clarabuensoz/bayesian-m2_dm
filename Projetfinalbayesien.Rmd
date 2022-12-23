@@ -117,8 +117,29 @@ model1_fit <- jags(data = mydata,
 model1_fit
 ```
 #### Assess convergence
-Rhat
-n.eff
+
+##### Qualitativement par des graphiques:
+```{r}
+traceplot(model1_fit,mfrow=c(1,2),varname=c("a0"),ask=FALSE)
+````
+Selon ce graphique, les 3 chaines mixent bien.
+Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
+
+````{r}
+autocorr.plot(as.mcmc(model1_fit),ask=FALSE)
+````
+On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
+
+##### Quantitativement:
+###### N.eff
+The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
+Le critère généralement choisit est de n.eff >100.
+Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
+
+```{r}
+model1_fit
+```
+
 
 #### Model selection: Compute WAIC criterion
 ```{r}
@@ -888,3 +909,6 @@ plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```{r}
 waic_save
 ```
+
+To do: 
+- Vérifier la convergence pour tous les modèles ET n.eff
