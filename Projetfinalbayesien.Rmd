@@ -93,6 +93,22 @@ ggplot(data, aes(x=prev, y=shells/taillepop, color=Site)) +
        x="Seroprevalence",
        y="Shell per individual")+
   theme_bw()
+
+
+
+# Verification pour offset (ne pas inclure)
+ggplot(data, aes(x=prev, y=log(A), color=Site)) + 
+  geom_point(show.legend = T, size=6)+
+   labs(title="Figure 4 : Seroprevalence against log(Area)", 
+       x="Seroprevalence",
+       y="log(A)")+
+  theme_bw()
+ggplot(data, aes(x=log(prev), y=log(A), color=Site)) + 
+  geom_point(show.legend = T, size=6)+
+   labs(title="Figure 4 : Seroprevalence against log(Area)", 
+       x="Seroprevalence",
+       y="A")+
+  theme_bw()
   
 
 ```
@@ -100,7 +116,7 @@ ggplot(data, aes(x=prev, y=shells/taillepop, color=Site)) +
 ```{r}
 summary(data)
 
-ggplot(data, aes(shells, color = Site,fill=taillepop)) + geom_histogram(binwidth = 1) 
+#ggplot(data, aes(shells, color = Site,fill=taillepop)) + geom_histogram(binwidth = 1) 
 ```
 
 ## Part 2 : Models implementation
@@ -188,6 +204,8 @@ model1_fit
 
 ```{r}
 traceplot(model1_fit,mfrow=c(1,2),varname=c("a0"),ask=FALSE)
+```
+
 Selon ce graphique, les 3 chaines mixent bien.
 Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
 
@@ -199,7 +217,7 @@ On observe une autocorrelation limitée, le nombre d'itérations spécifié semb
 The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
-
+```{r}
 model1_fit
 ```
 
@@ -309,6 +327,7 @@ model1_bis_fit
 
 ```{r}
 traceplot(model1_bis_fit,mfrow=c(1,2),varname=c("a0"),ask=FALSE)
+```
 Selon ce graphique, les 3 chaines mixent bien.
 Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
 
@@ -321,6 +340,7 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
+```{r}
 model1_bis_fit
 ```
 
@@ -431,6 +451,8 @@ model2_fit
 
 ```{r}
 traceplot(model2_fit,mfrow=c(1,2),varname=c("a0","a1"),ask=FALSE)
+```
+
 Selon ce graphique, les 3 chaines mixent bien.
 Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
 
@@ -443,6 +465,7 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
+```{r}
 model2_fit
 ```
 
@@ -554,10 +577,13 @@ model2_bis_fit
 
 ```{r}
 traceplot(model2_bis_fit,mfrow=c(1,2),varname=c("a0","a1"),ask=FALSE)
+```
 Selon ce graphique, les 3 chaines mixent bien.
 Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
 
+```{r}
 autocorr.plot(as.mcmc(model2_bis_fit),ask=FALSE)
+```
 On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
 
 ##### Quantitativement:
@@ -566,6 +592,7 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
+```{r}
 model2_bis_fit
 ```
 
@@ -677,10 +704,13 @@ model2_bis_bis_fit
 
 ```{r}
 traceplot(model2_bis_fit,mfrow=c(1,2),varname=c("a0","a1"),ask=FALSE)
+```
 Selon ce graphique, les 3 chaines mixent bien.
 Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
 
+```{r}
 autocorr.plot(as.mcmc(model2_bis_fit),ask=FALSE)
+```
 On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
 
 ##### Quantitativement:
@@ -689,6 +719,7 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
+```{r}
 model2_bis_bis_fit
 ```
 
@@ -743,7 +774,7 @@ N(mu.es,tau.es) #tau.es = 1/variance=sigma.es² mu.es\~N(0,sd=10) tau.es
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
 nbsites<-length(unique(data$Site))
-sites<-as.numeric(data$Site)
+sites<-as.numeric(as.factor(data$Site))
 mydata<-list(y=y,n=length(y),N=taillepop,nbsites=nbsites,sites=sites)
 ```
 
@@ -809,10 +840,12 @@ model3_fit
 
 ```{r}
 traceplot(model3_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a"),ask=FALSE)
+```
 
 Le mixage semble ok mais pas parfait.
-
+```{r}
 autocorr.plot(as.mcmc(model3_fit),ask=FALSE)
+```
 Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelationo pour sigma. Je décide d'augmenter le nombre d'itération à 8000. J'observe même résultat.  Changer  les valeurs initiales de modifie pas non plus.
 
 Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
@@ -823,6 +856,7 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
+```{r}
 model3_fit
 ```
 
@@ -879,7 +913,7 @@ tau.es \<- 1 / (sigma.es \* sigma.es) sigma.es\~Unif(0,100)
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
 nbsites<-length(unique(data$Site))
-sites<-as.numeric(data$Site)
+sites<-as.numeric(as.factor(data$Site))
 mydata<-list(y=y,n=length(y),N=taillepop,A=A,nbsites=nbsites,sites=sites)
 ```
 
@@ -945,10 +979,11 @@ model3_bis_fit
 
 ```{r}
 traceplot(model3_bis_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a"),ask=FALSE)
-
+```
 Le mixage semble ok mais pas parfait.
-
+```{r}
 autocorr.plot(as.mcmc(model3_bis_fit),ask=FALSE)
+```
 Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelationo pour sigma. Je décide d'augmenter le nombre d'itération à 10000. 
 
 On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
@@ -960,6 +995,7 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
+```{r}
 model3_bis_fit
 ```
 
@@ -1017,7 +1053,7 @@ sigma.es\~Unif(0,100)
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
 nbsites<-length(unique(data$Site))
-sites<-as.numeric(data$Site)
+sites<-as.numeric(as.factor(data$Site))
 mydata<-list(y=y,x=x,n=length(y),N=taillepop,nbsites=nbsites,sites=sites)
 ```
 
@@ -1082,10 +1118,11 @@ model4_fit
 
 ```{r}
 traceplot(model4_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a","a1"),ask=FALSE)
-
+```
 Le mixage semble ok.
-
+```{r}
 autocorr.plot(as.mcmc(model4_fit),ask=FALSE)
+```
 Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelation. Je décide d'augmenter le nombre d'itération à 10000 et thinnning de 10.
 
 Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
@@ -1096,6 +1133,7 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
+```{r}
 model4_fit
 ```
 
@@ -1153,7 +1191,7 @@ sigma.es) sigma.es\~Unif(0,100)
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
 nbsites<-length(unique(data$Site))
-sites<-as.numeric(data$Site)
+sites<-as.numeric(as.factor(data$Site))
 mydata<-list(y=y,x=x,n=length(y),N=taillepop,A=A,nbsites=nbsites,sites=sites)
 ```
 
@@ -1218,10 +1256,13 @@ model4_bis_fit
 
 ```{r}
 traceplot(model4_bis_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a","a1"),ask=FALSE)
+```
 
 Le mixage semble ok.
-
+```{r}
 autocorr.plot(as.mcmc(model4_bis_fit),ask=FALSE)
+```
+
 Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelation. Je décide d'augmenter le nombre d'itération à 10000 et thinnning de 10.
 
 Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
@@ -1232,6 +1273,7 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
+```{r}
 model4_bis_fit
 ```
 
@@ -1645,7 +1687,11 @@ hist(data$shell)
 ```
 
 Il semble y avoir beaucoup de 0 dans les données = potentiel
-overdispersion. Explore zero inflation:
+overdispersion.
+Les rugs appliqués au bar plot semblent indiqué une série de clumping assez clair.
+Overdispersion est likely to be an issue.
+
+Explore zero inflation:
 
 ```{r}
 #proportion of 0's in the data

@@ -14,6 +14,11 @@ library(knitr)
 library(kableExtra)
 ```
 
+# Partie 1:
+
+Nombreux 0: peux poser problème car causer de l'overdispersion. Dans ces cas présent, assumption de la loi de poisson ne sera pas respecter. Nous sommes consciente de ce problème mais les consignes indiqué de ne pas vérifier les hypothèses  nous avons choisis d'ignorer cette effet. Nous y reviendrons dans la discussion.
+
+# Model
 To answer this question we decided to used the following generalized linear model.
 We assumed that the number of shell remains collected at a site s in a year y followed a Poisson distribution. 
 The poisson distribution is used to model count data. Using a Poisson distribution underlie several assumptions. The observations musts be independent from one another. The mean and the variance of a poisson random variable must be equal. Which can be translated as the dispersion must be equal to one.
@@ -29,7 +34,7 @@ $$
 
 Where T the total population size. The linear dependency of the mean of shell remains per individual per site and year $u_{iys}$ was a log link function.
  We decided to implement a fixed effet $\beta$ for the seroprevalence P and a random effect of the site on the intercept $a_{site_i}$.
-An offset on the area A of each site was implemented in order to account for ...
+An offset on the area A of each site was implemented in order to account for sampling effort (which we are not interested to modelize in our model.) Fixed coefficient. 
 
 
 By using this model, our hypothesis is that the prevalence can explain part of the variance in the mean number of shell remains o... 
@@ -54,10 +59,12 @@ $$
 ```{r,echo=FALSE}
 
 Modelname<-c("1","1bis","2","2bis","3","3bis","4","4bis")
-log(u_{iys})<-c("","1bis","2","2bis","a_{site_i}","a_{site_i}+log(A_{s})","a_{site_i}+\beta P_{ys}","a_{site_i}+\beta P_{ys}+log(A_{s})")
-Fixedeffect<-c("","","","","","","","")
+logu<-c("a0+\beta P_{ys}","a0+\beta P_{ys}+log(A_{s})","2","2bis","a_{site_i}","a_{site_i}+log(A_{s})","a_{site_i}+\beta P_{ys}","a_{site_i}+\beta P_{ys}+log(A_{s})")
+Fixedeffect<-c("None","None","Prevalence","Prevalence","None","None","","")
 Randomeffect<-c("","","","","","","","")
 Priors<-c("")s
+
+name colonne: log(u_{iys})
 
 #head(iris) %>% kable( format = "markdown",booktable = TRUE,caption = "Ma table")
 
@@ -83,3 +90,5 @@ So it's not a ...
 And there is problem of dispersion qu'on peut notamment hypothésé au vu des nombreux 0 dans nos données déjà. 
 Il aurait été pertinent de tester pour l'overdispersion.
 Une autre approche binomiale négative peutêtre ou d'account pour l'effet random aurait pu être intéressante. Ou d'inclure comme l'ont fait les auteurs interactions. 
+
+cf https://agabrioblog.onrender.com/tutorial/glm2-jags/glm2-jags/ - zero inflated poisson model.
