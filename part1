@@ -1,0 +1,54 @@
+
+Comme les auteurs le font remarquer dans leur article, les données collectées sont peu nombreuses : 3 ans de données sur 10 sites. Nous allons nous intéressées particulièrement aux vraiables "shells" et "prev" (restes de carapaces et séroprévalence).
+
+```{r}
+
+
+```
+
+
+
+```{r}
+#plot(density(data$prev))
+
+#plot(data$prev,data$shell)
+#plot(data$prev,data$density)
+
+ggplot(data, aes(x=Site, y=shells/taillepop, fill=Site)) + 
+  geom_boxplot(show.legend = F)+
+  labs(title="Figure 1 : Shells per individual at each site", 
+       x="Sites",
+       y="Shell per individual")+
+  theme_bw()
+
+mean(data$shells/taillepop)
+sd(data$shells/taillepop)
+
+```
+
+Le nombre de reste de carapace par individu est hétérogène entre chaque site (Fig. 1). Aux sites BS, Cent et TE moins de 0.005 carapaces par individu.Le site CF est le site auquel la variable possède les valeurs les plus fortes.
+
+
+```{r}
+ggplot(data, aes(x=Site, y=prev, fill=Site)) + 
+  geom_boxplot(show.legend = F)+
+  labs(title="Figure 2 : Mycoplasma agassizii seroprevalence at each site", 
+       x="Sites",
+       y="Seroprevalence")+
+  theme_bw()
+```
+
+La séroprévalence est également hétérogène entre les sites (Fig. 2). De plus, elle varie au sein de certains sites (Cent, FC, Old), alors que l'écart type semble très faible dans d'autres sites( BS, FE, Ord). Le site CF témoigne de la plus haute séroprévalence, ce qui avec l'observation précédente (Fig. 1) renforce l'hypothèse selon laquelle la séroprévalence est positivement corrélée au nombre de reste de carapace.
+
+```{r}
+
+ggplot(data, aes(x=prev, y=shells/taillepop, color=year)) + 
+  geom_point(show.legend = T, size=6)+
+   labs(title="Figure 3 : Shell remains per individual for each year of the study along Mycoplasma agassizii seroprevalence", 
+       x="Seroprevalence",
+       y="Shell per individual")+
+  theme_bw()
+  
+
+```
+Cette dernière hypothèse est également justifiée par la figure 3 qui semble montrer une légère pente positive dans la relation shell/idv ~seroprevalence. Cette pente varie selon l'année mais la tendance reste présente, justifiant notre hypothèse.
