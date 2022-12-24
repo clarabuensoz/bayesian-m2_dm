@@ -54,7 +54,7 @@ $$
 ```{r,echo=FALSE}
 
 Modelname<-c("1","1bis","2","2bis","3","3bis","4","4bis")
-Model<-c("1","1bis","2","2bis","3","3bis","4","4bis")
+log(u_{iys})<-c("","1bis","2","2bis","a_{site_i}","a_{site_i}+log(A_{s})","a_{site_i}+\beta P_{ys}","a_{site_i}+\beta P_{ys}+log(A_{s})")
 Fixedeffect<-c("","","","","","","","")
 Randomeffect<-c("","","","","","","","")
 Priors<-c("")s
