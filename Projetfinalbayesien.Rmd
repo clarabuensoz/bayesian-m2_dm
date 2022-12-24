@@ -3,25 +3,32 @@ title: "ProjetBayésien"
 author: "orianebasso"
 date: "2022-12-22"
 output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Article: Upper respiratory tract disease, force of infection, and effects on survival of gopher tortoises
+Article: Upper respiratory tract disease, force of infection, and
+effects on survival of gopher tortoises
 
+## Libraries
 
-## Libraries 
 ```{r}
 library(ggplot2)
 library(dplyr)
 library(R2jags)
 ```
 
+## Part 1: Lecture, exploration des données
 
-## Part 1:  Lecture, exploration des données
-Lisez les données, et assurez vous que les variables sont au bon format. Calculez des statistiques descriptives des données, et proposez des visualisations graphiques. Commentez ce que vous retenez de l'exploration des données.
+Lisez les données, et assurez vous que les variables sont au bon format.
+Calculez des statistiques descriptives des données, et proposez des
+visualisations graphiques. Commentez ce que vous retenez de
+l'exploration des données.
 
 ### Mise en forme des données
 
@@ -41,9 +48,10 @@ names(data)[1]<-"Site"
 
 ```
 
-Comme les auteurs le font remarquer dans leur article, les données sont peu nombreuses.
+Comme les auteurs le font remarquer dans leur article, les données sont
+peu nombreuses.
 
-```{r}
+```{r eval=FALSE}
 #plot(density(data$prev))
 
 #plot(data$prev,data$shell)
@@ -56,9 +64,6 @@ ggplot(data, aes(x=Site, y=shells/taillepop, fill=Site)) +
        y="Shell per individual")+
   theme_bw()
 ```
-
-
-
 
 ```{r}
 ggplot(data, aes(x=Site, y=prev, fill=Site)) + 
@@ -91,6 +96,7 @@ ggplot(data, aes(x=prev, y=shells/taillepop, color=Site)) +
   
 
 ```
+
 ```{r}
 summary(data)
 
@@ -98,7 +104,9 @@ ggplot(data, aes(shells, color = Site,fill=taillepop)) + geom_histogram(binwidth
 ```
 
 ## Part 2 : Models implementation
+
 ### Data
+
 ```{r}
 # Define numeric vector for the factor Site
 Site<-as.numeric(data$Site)
@@ -112,23 +120,21 @@ x<-(data$prev - mean(data$prev))/sd(data$prev)
 #hist(x)
 
 ```
-### Model 1
-Y~ Poisson (T * u)
-log (u) = a0 
-Prior:
-  a0~ N(0,sd=10)
 
-Avec :
- - Y = nombre de carapaces
- - T = taille de la population
- - a0 = intercept =
+### Model 1
+
+Y\~ Poisson (T \* u) log (u) = a0 Prior: a0\~ N(0,sd=10)
+
+Avec : - Y = nombre de carapaces - T = taille de la population - a0 =
+intercept =
+
 ```{r}
 #Create dataframe of data for this model:
 mydata<-list(y=y,n=length(y),N=taillepop)
 ```
 
-
 #### Write the model:
+
 ```{r}
 model_1<-function(){
   # likelihood
@@ -142,10 +148,10 @@ model_1<-function(){
 }
 ```
 
-
 #### Specify info to Jags
-Initial values:
-We specify the initial values for 3 markov chains:
+
+Initial values: We specify the initial values for 3 markov chains:
+
 ```{r}
 init1 <- list(a0 = -4)
 init2 <- list(a0 = -3)
@@ -154,11 +160,13 @@ init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
+
 ```{r}
 params <- c("a0")
 ```
 
 #### Fit the model with Jags
+
 ```{r}
 model1_fit <- jags(data = mydata,
                              inits = init,
@@ -173,18 +181,17 @@ model1_fit <- jags(data = mydata,
 ```{r}
 model1_fit
 ```
+
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
+
 ```{r}
 traceplot(model1_fit,mfrow=c(1,2),varname=c("a0"),ask=FALSE)
-````
 Selon ce graphique, les 3 chaines mixent bien.
 Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
 
-````{r}
 autocorr.plot(as.mcmc(model1_fit),ask=FALSE)
-````
 On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
 
 ##### Quantitativement:
@@ -193,19 +200,24 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
-```{r}
 model1_fit
 ```
+
 ###### Rhat: détecte si problème de convergence
 
-Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
-Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine
+(entre les chaines et au sein des chaines) à la variabilité intra
+chaine. Condition nécessaire pour atteindre la convergence: Rhat \<1.1.
+Mais attention, cela nous indique uniquement si la chaine n'a pas
+convergé. On ne peut pas être certain de la convergence même si le
+critère est \<1.1.
 
--> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
-Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
-
+-\> Valeur proche 1 : indique convergence probable. Acceptable si
+inférieur à 1.1 Ici on a une valeur proche de 1. Rien à signaler
+d'anormal pour la convergence.
 
 #### Model selection: Compute WAIC criterion
+
 ```{r}
 samples <- jags.samples(model1_fit$model,c("WAIC","deviance"), type = "mean",
 n.iter = 6000,
@@ -223,6 +235,7 @@ waic$prior<-"a0~ N(0,sd=10)"
 waic_save<-as.data.frame(waic)
                      
 ```
+
 #### The results: look to posterior distributions
 
 ```{r}
@@ -231,22 +244,18 @@ hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
 plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
-
-
 ### Model 1_bis
-Y~ Poisson (T * u)
-log (u) = a0 + log (A)
-Prior:
-  a0~ N(0,sd=10)
-  
+
+Y\~ Poisson (T \* u) log (u) = a0 + log (A) Prior: a0\~ N(0,sd=10)
+
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
 mydata<-list(y=y,n=length(y),A=A,N=taillepop)
 ```
 
-
 #### Write the model:
+
 ```{r}
 model_1_bis<-function(){
   # likelihood
@@ -260,10 +269,10 @@ model_1_bis<-function(){
 }
 ```
 
-
 #### Specify info to Jags
-Initial values:
-We specify the initial values for 3 markov chains:
+
+Initial values: We specify the initial values for 3 markov chains:
+
 ```{r}
 init1 <- list(a0 = -4)
 init2 <- list(a0 = -3)
@@ -272,11 +281,13 @@ init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
+
 ```{r}
 params <- c("a0")
 ```
 
 #### Fit the model with Jags
+
 ```{r}
 model1_bis_fit <- jags(data = mydata,
                              inits = init,
@@ -288,8 +299,6 @@ model1_bis_fit <- jags(data = mydata,
                              n.thin = 1)
 ```
 
-
-
 ```{r}
 model1_bis_fit
 ```
@@ -297,15 +306,13 @@ model1_bis_fit
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
+
 ```{r}
 traceplot(model1_bis_fit,mfrow=c(1,2),varname=c("a0"),ask=FALSE)
-````
 Selon ce graphique, les 3 chaines mixent bien.
 Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
 
-````{r}
 autocorr.plot(as.mcmc(model1_bis_fit),ask=FALSE)
-````
 On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
 
 ##### Quantitativement:
@@ -314,20 +321,24 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
-```{r}
 model1_bis_fit
 ```
+
 ###### Rhat: détecte si problème de convergence
 
-Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
-Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine
+(entre les chaines et au sein des chaines) à la variabilité intra
+chaine. Condition nécessaire pour atteindre la convergence: Rhat \<1.1.
+Mais attention, cela nous indique uniquement si la chaine n'a pas
+convergé. On ne peut pas être certain de la convergence même si le
+critère est \<1.1.
 
--> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
-Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
-
-
+-\> Valeur proche 1 : indique convergence probable. Acceptable si
+inférieur à 1.1 Ici on a une valeur proche de 1. Rien à signaler
+d'anormal pour la convergence.
 
 #### Model selection: Compute WAIC criterion
+
 ```{r}
 samples <- jags.samples(model1_bis_fit$model,c("WAIC","deviance"), type = "mean",
 n.iter = 6000,
@@ -345,6 +356,7 @@ waic<-as.data.frame(waic)
 waic_save<-rbind(waic_save,waic)
                      
 ```
+
 #### The results: look to posterior distributions
 
 ```{r}
@@ -353,24 +365,18 @@ hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
 plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
-
-
-
-
 ### Model 2
-Y~ Poisson (T * u)
-log (u) = a0 + a1 P 
-Prior:
-  a0~ N(0,sd=10)
-  a1~ N(0,sd=10)
-  
+
+Y\~ Poisson (T \* u) log (u) = a0 + a1 P Prior: a0\~ N(0,sd=10) a1\~
+N(0,sd=10)
+
 ```{r}
 #Create dataframe of data for this model:
 mydata<-list(y=y,x=x,n=length(y),N=taillepop)
 ```
 
-
 #### Write the model:
+
 ```{r}
 model_2<-function(){
   # likelihood
@@ -385,10 +391,10 @@ model_2<-function(){
 }
 ```
 
-
 #### Specify info to Jags
-Initial values:
-We specify the initial values for 3 markov chains:
+
+Initial values: We specify the initial values for 3 markov chains:
+
 ```{r}
 init1 <- list(a0 = -4,a1=0)
 init2 <- list(a0 = -3,a1=1)
@@ -397,11 +403,13 @@ init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
+
 ```{r}
 params <- c("a0","a1")
 ```
 
 #### Fit the model with Jags
+
 ```{r}
 model2_fit <- jags(data = mydata,
                              inits = init,
@@ -413,8 +421,6 @@ model2_fit <- jags(data = mydata,
                              n.thin = 1)
 ```
 
-
-
 ```{r}
 model2_fit
 ```
@@ -422,15 +428,13 @@ model2_fit
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
+
 ```{r}
 traceplot(model2_fit,mfrow=c(1,2),varname=c("a0","a1"),ask=FALSE)
-````
 Selon ce graphique, les 3 chaines mixent bien.
 Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
 
-````{r}
 autocorr.plot(as.mcmc(model2_fit),ask=FALSE)
-````
 On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
 
 ##### Quantitativement:
@@ -439,20 +443,24 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
-```{r}
 model2_fit
 ```
+
 ###### Rhat: détecte si problème de convergence
 
-Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
-Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine
+(entre les chaines et au sein des chaines) à la variabilité intra
+chaine. Condition nécessaire pour atteindre la convergence: Rhat \<1.1.
+Mais attention, cela nous indique uniquement si la chaine n'a pas
+convergé. On ne peut pas être certain de la convergence même si le
+critère est \<1.1.
 
--> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
-Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
-
-
+-\> Valeur proche 1 : indique convergence probable. Acceptable si
+inférieur à 1.1 Ici on a une valeur proche de 1. Rien à signaler
+d'anormal pour la convergence.
 
 #### Model selection: Compute WAIC criterion
+
 ```{r}
 samples <- jags.samples(model2_fit$model,c("WAIC","deviance"), type = "mean",
 n.iter = 6000,
@@ -470,6 +478,7 @@ waic<-as.data.frame(waic)
 waic_save<-rbind(waic_save,waic)
                      
 ```
+
 #### The results: look to posterior distributions
 
 ```{r}
@@ -478,22 +487,19 @@ hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
 plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
-
 ### Model 2_bis - prior sd 10
-Y~ Poisson (T * u)
-log (u) = a0 + a1 P + log(A)
-Prior:
-  a0~ N(0,sd=10)
-  a1~ N(0,sd=10)
-  
+
+Y\~ Poisson (T \* u) log (u) = a0 + a1 P + log(A) Prior: a0\~ N(0,sd=10)
+a1\~ N(0,sd=10)
+
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
 mydata<-list(y=y,x=x,n=length(y),N=taillepop,A=A)
 ```
 
-
 #### Write the model:
+
 ```{r}
 model_2_bis<-function(){
   # likelihood
@@ -508,10 +514,10 @@ model_2_bis<-function(){
 }
 ```
 
-
 #### Specify info to Jags
-Initial values:
-We specify the initial values for 3 markov chains:
+
+Initial values: We specify the initial values for 3 markov chains:
+
 ```{r}
 init1 <- list(a0 = -4,a1=0)
 init2 <- list(a0 = -3,a1=1)
@@ -520,11 +526,13 @@ init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
+
 ```{r}
 params <- c("a0","a1")
 ```
 
 #### Fit the model with Jags
+
 ```{r}
 model2_bis_fit <- jags(data = mydata,
                              inits = init,
@@ -536,8 +544,6 @@ model2_bis_fit <- jags(data = mydata,
                              n.thin = 1)
 ```
 
-
-
 ```{r}
 model2_bis_fit
 ```
@@ -545,15 +551,13 @@ model2_bis_fit
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
+
 ```{r}
 traceplot(model2_bis_fit,mfrow=c(1,2),varname=c("a0","a1"),ask=FALSE)
-````
 Selon ce graphique, les 3 chaines mixent bien.
 Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
 
-````{r}
 autocorr.plot(as.mcmc(model2_bis_fit),ask=FALSE)
-````
 On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
 
 ##### Quantitativement:
@@ -562,20 +566,24 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
-```{r}
 model2_bis_fit
 ```
+
 ###### Rhat: détecte si problème de convergence
 
-Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
-Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine
+(entre les chaines et au sein des chaines) à la variabilité intra
+chaine. Condition nécessaire pour atteindre la convergence: Rhat \<1.1.
+Mais attention, cela nous indique uniquement si la chaine n'a pas
+convergé. On ne peut pas être certain de la convergence même si le
+critère est \<1.1.
 
--> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
-Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
-
-
+-\> Valeur proche 1 : indique convergence probable. Acceptable si
+inférieur à 1.1 Ici on a une valeur proche de 1. Rien à signaler
+d'anormal pour la convergence.
 
 #### Model selection: Compute WAIC criterion
+
 ```{r}
 samples <- jags.samples(model2_bis_fit$model,c("WAIC","deviance"), type = "mean",
 n.iter = 6000,
@@ -593,6 +601,7 @@ waic<-as.data.frame(waic)
 waic_save<-rbind(waic_save,waic)
                      
 ```
+
 #### The results: look to posterior distributions
 
 ```{r}
@@ -601,22 +610,19 @@ hist(model2_bis_fit$BUGSoutput$sims.matrix[,"a0"])
 plot(density(model2_bis_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
- 
 ### Model 2_bis - prior sd 1000
-Y~ Poisson (T * u)
-log (u) = a0 + a1 P + log(A)
-Prior:
-  a0~ N(0,sd=1000)
-  a1~ N(0,sd=1000)
-  
+
+Y\~ Poisson (T \* u) log (u) = a0 + a1 P + log(A) Prior: a0\~
+N(0,sd=1000) a1\~ N(0,sd=1000)
+
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
 mydata<-list(y=y,x=x,n=length(y),N=taillepop,A=A)
 ```
 
-
 #### Write the model:
+
 ```{r}
 model_2_bis_bis<-function(){
   # likelihood
@@ -631,10 +637,10 @@ model_2_bis_bis<-function(){
 }
 ```
 
-
 #### Specify info to Jags
-Initial values:
-We specify the initial values for 3 markov chains:
+
+Initial values: We specify the initial values for 3 markov chains:
+
 ```{r}
 init1 <- list(a0 = -4,a1=0)
 init2 <- list(a0 = -3,a1=1)
@@ -643,11 +649,13 @@ init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
+
 ```{r}
 params <- c("a0","a1")
 ```
 
 #### Fit the model with Jags
+
 ```{r}
 model2_bis_bis_fit <- jags(data = mydata,
                              inits = init,
@@ -659,8 +667,6 @@ model2_bis_bis_fit <- jags(data = mydata,
                              n.thin = 1)
 ```
 
-
-
 ```{r}
 model2_bis_bis_fit
 ```
@@ -668,15 +674,13 @@ model2_bis_bis_fit
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
+
 ```{r}
 traceplot(model2_bis_fit,mfrow=c(1,2),varname=c("a0","a1"),ask=FALSE)
-````
 Selon ce graphique, les 3 chaines mixent bien.
 Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
 
-````{r}
 autocorr.plot(as.mcmc(model2_bis_fit),ask=FALSE)
-````
 On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
 
 ##### Quantitativement:
@@ -685,20 +689,24 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
-```{r}
 model2_bis_bis_fit
 ```
+
 ###### Rhat: détecte si problème de convergence
 
-Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
-Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine
+(entre les chaines et au sein des chaines) à la variabilité intra
+chaine. Condition nécessaire pour atteindre la convergence: Rhat \<1.1.
+Mais attention, cela nous indique uniquement si la chaine n'a pas
+convergé. On ne peut pas être certain de la convergence même si le
+critère est \<1.1.
 
--> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
-Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
-
-
+-\> Valeur proche 1 : indique convergence probable. Acceptable si
+inférieur à 1.1 Ici on a une valeur proche de 1. Rien à signaler
+d'anormal pour la convergence.
 
 #### Model selection: Compute WAIC criterion
+
 ```{r}
 samples <- jags.samples(model2_bis_bis_fit$model,c("WAIC","deviance"), type = "mean",
 n.iter = 6000,
@@ -716,6 +724,7 @@ waic<-as.data.frame(waic)
 waic_save<-rbind(waic_save,waic)
                      
 ```
+
 #### The results: look to posterior distributions
 
 ```{r}
@@ -724,17 +733,12 @@ hist(model2_bis_fit$BUGSoutput$sims.matrix[,"a0"])
 plot(density(model2_bis_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
-
 ### Model 3
-Y~ Poisson (T * u)
-log (u) = a0 + Es 
-Prior:
-  a0~ N(0,sd=10)
-  Es~ N(mu.es,tau.es) #tau.es = 1/variance=sigma.es²
-      mu.es~N(0,sd=10)
-      tau.es <- 1 / (sigma.es * sigma.es)
-      sigma.es~Unif(0,100)
-  
+
+Y\~ Poisson (T \* u) log (u) = a0 + Es Prior: a0\~ N(0,sd=10) Es\~
+N(mu.es,tau.es) #tau.es = 1/variance=sigma.es² mu.es\~N(0,sd=10) tau.es
+\<- 1 / (sigma.es \* sigma.es) sigma.es\~Unif(0,100)
+
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
@@ -743,8 +747,8 @@ sites<-as.numeric(data$Site)
 mydata<-list(y=y,n=length(y),N=taillepop,nbsites=nbsites,sites=sites)
 ```
 
-
 #### Write the model:
+
 ```{r}
 model_3<-function(){
   # likelihood
@@ -765,10 +769,10 @@ model_3<-function(){
 }
 ```
 
-
 #### Specify info to Jags
-Initial values:
-We specify the initial values for 3 markov chains:
+
+Initial values: We specify the initial values for 3 markov chains:
+
 ```{r}
 init1 <- list(mu.a=-3,sigma.a=0.5)
 init2 <- list(mu.a=-1,sigma.a=1.5)
@@ -777,11 +781,13 @@ init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
+
 ```{r}
 params <- c("mu.a","sigma.a")
 ```
 
 #### Fit the model with Jags
+
 ```{r}
 model3_fit <- jags(data = mydata,
                              inits = init,
@@ -793,8 +799,6 @@ model3_fit <- jags(data = mydata,
                              n.thin = 1)
 ```
 
-
-
 ```{r}
 model3_fit
 ```
@@ -802,15 +806,13 @@ model3_fit
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
+
 ```{r}
 traceplot(model3_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a"),ask=FALSE)
-````
 
 Le mixage semble ok mais pas parfait.
 
-````{r}
 autocorr.plot(as.mcmc(model3_fit),ask=FALSE)
-````
 Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelationo pour sigma. Je décide d'augmenter le nombre d'itération à 8000. J'observe même résultat.  Changer  les valeurs initiales de modifie pas non plus.
 
 Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
@@ -821,20 +823,24 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
-```{r}
 model3_fit
 ```
+
 ###### Rhat: détecte si problème de convergence
 
-Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
-Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine
+(entre les chaines et au sein des chaines) à la variabilité intra
+chaine. Condition nécessaire pour atteindre la convergence: Rhat \<1.1.
+Mais attention, cela nous indique uniquement si la chaine n'a pas
+convergé. On ne peut pas être certain de la convergence même si le
+critère est \<1.1.
 
--> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
-Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
-
-
+-\> Valeur proche 1 : indique convergence probable. Acceptable si
+inférieur à 1.1 Ici on a une valeur proche de 1. Rien à signaler
+d'anormal pour la convergence.
 
 #### Model selection: Compute WAIC criterion
+
 ```{r}
 samples <- jags.samples(model3_fit$model,c("WAIC","deviance"), type = "mean",
 n.iter = 6000,
@@ -854,6 +860,7 @@ waic<-as.data.frame(waic)
 waic_save<-rbind(waic_save,waic)
                      
 ```
+
 #### The results: look to posterior distributions
 
 ```{r}
@@ -862,25 +869,12 @@ hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
 plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
-
-
-
-
-
-
-
-
-
 ### Model 3_bis
-Y~ Poisson (T * u)
-log (u) = a0 + Es + log(A)
-Prior:
-  a0~ N(0,sd=10)
-  Es~ N(mu.es,tau.es) #tau.es = 1/variance=sigma.es²
-      mu.es~N(0,sd=10)
-      tau.es <- 1 / (sigma.es * sigma.es)
-      sigma.es~Unif(0,100)
-  
+
+Y\~ Poisson (T \* u) log (u) = a0 + Es + log(A) Prior: a0\~ N(0,sd=10)
+Es\~ N(mu.es,tau.es) #tau.es = 1/variance=sigma.es² mu.es\~N(0,sd=10)
+tau.es \<- 1 / (sigma.es \* sigma.es) sigma.es\~Unif(0,100)
+
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
@@ -889,8 +883,8 @@ sites<-as.numeric(data$Site)
 mydata<-list(y=y,n=length(y),N=taillepop,A=A,nbsites=nbsites,sites=sites)
 ```
 
-
 #### Write the model:
+
 ```{r}
 model_3_bis<-function(){
   # likelihood
@@ -911,10 +905,10 @@ model_3_bis<-function(){
 }
 ```
 
-
 #### Specify info to Jags
-Initial values:
-We specify the initial values for 3 markov chains:
+
+Initial values: We specify the initial values for 3 markov chains:
+
 ```{r}
 init1 <- list(mu.a=1,sigma.a=0.5)
 init2 <- list(mu.a=-3,sigma.a=1.5)
@@ -923,11 +917,13 @@ init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
+
 ```{r}
 params <- c("mu.a","sigma.a")
 ```
 
 #### Fit the model with Jags
+
 ```{r}
 model3_bis_fit <- jags(data = mydata,
                              inits = init,
@@ -939,8 +935,6 @@ model3_bis_fit <- jags(data = mydata,
                              n.thin = 1)
 ```
 
-
-
 ```{r}
 model3_bis_fit
 ```
@@ -948,15 +942,13 @@ model3_bis_fit
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
+
 ```{r}
 traceplot(model3_bis_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a"),ask=FALSE)
-````
 
 Le mixage semble ok mais pas parfait.
 
-````{r}
 autocorr.plot(as.mcmc(model3_bis_fit),ask=FALSE)
-````
 Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelationo pour sigma. Je décide d'augmenter le nombre d'itération à 10000. 
 
 On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
@@ -968,21 +960,24 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
-```{r}
 model3_bis_fit
 ```
+
 ###### Rhat: détecte si problème de convergence
 
-Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
-Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine
+(entre les chaines et au sein des chaines) à la variabilité intra
+chaine. Condition nécessaire pour atteindre la convergence: Rhat \<1.1.
+Mais attention, cela nous indique uniquement si la chaine n'a pas
+convergé. On ne peut pas être certain de la convergence même si le
+critère est \<1.1.
 
--> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
-Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
-
-
-
+-\> Valeur proche 1 : indique convergence probable. Acceptable si
+inférieur à 1.1 Ici on a une valeur proche de 1. Rien à signaler
+d'anormal pour la convergence.
 
 #### Model selection: Compute WAIC criterion
+
 ```{r}
 samples <- jags.samples(model3_bis_fit$model,c("WAIC","deviance"), type = "mean",
 n.iter = 6000,
@@ -1002,6 +997,7 @@ waic<-as.data.frame(waic)
 waic_save<-rbind(waic_save,waic)
                      
 ```
+
 #### The results: look to posterior distributions
 
 ```{r}
@@ -1010,25 +1006,13 @@ hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
 plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
-
-
-
-
-
-
-
-
 ### Model 4
-Y~ Poisson (T * u)
-log (u) = a0 + Es + a1*P
-Prior:
-  a0~ N(0,sd=10)
-  a1~ N(0,sd=10)
-  Es~ N(mu.es,tau.es) #tau.es = 1/variance=sigma.es²
-      mu.es~N(0,sd=10)
-      tau.es <- 1 / (sigma.es * sigma.es)
-      sigma.es~Unif(0,100)
-  
+
+Y\~ Poisson (T \* u) log (u) = a0 + Es + a1*P Prior: a0\~ N(0,sd=10)
+a1\~ N(0,sd=10) Es\~ N(mu.es,tau.es) #tau.es = 1/variance=sigma.es²
+mu.es\~N(0,sd=10) tau.es \<- 1 / (sigma.es* sigma.es)
+sigma.es\~Unif(0,100)
+
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
@@ -1037,8 +1021,8 @@ sites<-as.numeric(data$Site)
 mydata<-list(y=y,x=x,n=length(y),N=taillepop,nbsites=nbsites,sites=sites)
 ```
 
-
 #### Write the model:
+
 ```{r}
 model_4<-function(){
   # likelihood
@@ -1058,10 +1042,10 @@ model_4<-function(){
 }
 ```
 
-
 #### Specify info to Jags
-Initial values:
-We specify the initial values for 3 markov chains:
+
+Initial values: We specify the initial values for 3 markov chains:
+
 ```{r}
 init1 <- list(mu.a=1,sigma.a=0.5,a1=0)
 init2 <- list(mu.a=-3,sigma.a=1.5,a1=1)
@@ -1070,11 +1054,13 @@ init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
+
 ```{r}
 params <- c("mu.a","sigma.a","a1")
 ```
 
 #### Fit the model with Jags
+
 ```{r}
 model4_fit <- jags(data = mydata,
                              inits = init,
@@ -1086,8 +1072,6 @@ model4_fit <- jags(data = mydata,
                              n.thin = 10)
 ```
 
-
-
 ```{r}
 model4_fit
 ```
@@ -1095,15 +1079,13 @@ model4_fit
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
+
 ```{r}
 traceplot(model4_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a","a1"),ask=FALSE)
-````
 
 Le mixage semble ok.
 
-````{r}
 autocorr.plot(as.mcmc(model4_fit),ask=FALSE)
-````
 Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelation. Je décide d'augmenter le nombre d'itération à 10000 et thinnning de 10.
 
 Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
@@ -1114,21 +1096,24 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
-```{r}
 model4_fit
 ```
+
 ###### Rhat: détecte si problème de convergence
 
-Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
-Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine
+(entre les chaines et au sein des chaines) à la variabilité intra
+chaine. Condition nécessaire pour atteindre la convergence: Rhat \<1.1.
+Mais attention, cela nous indique uniquement si la chaine n'a pas
+convergé. On ne peut pas être certain de la convergence même si le
+critère est \<1.1.
 
--> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
-Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
-
-
-
+-\> Valeur proche 1 : indique convergence probable. Acceptable si
+inférieur à 1.1 Ici on a une valeur proche de 1. Rien à signaler
+d'anormal pour la convergence.
 
 #### Model selection: Compute WAIC criterion
+
 ```{r}
 samples <- jags.samples(model4_fit$model,c("WAIC","deviance"), type = "mean",
 n.iter = 6000,
@@ -1148,6 +1133,7 @@ waic<-as.data.frame(waic)
 waic_save<-rbind(waic_save,waic)
                      
 ```
+
 #### The results: look to posterior distributions
 
 ```{r}
@@ -1156,24 +1142,13 @@ hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
 plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
-
-
-
-
-
-
-
 ### Model 4_bis
-Y~ Poisson (T * u)
-log (u) = a0 + Es + a1*P+ log(A)
-Prior:
-  a0~ N(0,sd=10)
-  a1~ N(0,sd=10)
-  Es~ N(mu.es,tau.es) #tau.es = 1/variance=sigma.es²
-      mu.es~N(0,sd=10)
-      tau.es <- 1 / (sigma.es * sigma.es)
-      sigma.es~Unif(0,100)
-  
+
+Y\~ Poisson (T \* u) log (u) = a0 + Es + a1*P+ log(A) Prior: a0\~
+N(0,sd=10) a1\~ N(0,sd=10) Es\~ N(mu.es,tau.es) #tau.es =
+1/variance=sigma.es² mu.es\~N(0,sd=10) tau.es \<- 1 / (sigma.es*
+sigma.es) sigma.es\~Unif(0,100)
+
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
@@ -1182,8 +1157,8 @@ sites<-as.numeric(data$Site)
 mydata<-list(y=y,x=x,n=length(y),N=taillepop,A=A,nbsites=nbsites,sites=sites)
 ```
 
-
 #### Write the model:
+
 ```{r}
 model_4_bis<-function(){
   # likelihood
@@ -1203,10 +1178,10 @@ model_4_bis<-function(){
 }
 ```
 
-
 #### Specify info to Jags
-Initial values:
-We specify the initial values for 3 markov chains:
+
+Initial values: We specify the initial values for 3 markov chains:
+
 ```{r}
 init1 <- list(mu.a=1,sigma.a=0.5,a1=0)
 init2 <- list(mu.a=-3,sigma.a=1.5,a1=1)
@@ -1215,11 +1190,13 @@ init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
+
 ```{r}
 params <- c("mu.a","sigma.a","a1")
 ```
 
 #### Fit the model with Jags
+
 ```{r}
 model4_bis_fit <- jags(data = mydata,
                              inits = init,
@@ -1231,8 +1208,6 @@ model4_bis_fit <- jags(data = mydata,
                              n.thin = 10)
 ```
 
-
-
 ```{r}
 model4_bis_fit
 ```
@@ -1240,15 +1215,13 @@ model4_bis_fit
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
+
 ```{r}
 traceplot(model4_bis_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a","a1"),ask=FALSE)
-````
 
 Le mixage semble ok.
 
-````{r}
 autocorr.plot(as.mcmc(model4_bis_fit),ask=FALSE)
-````
 Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelation. Je décide d'augmenter le nombre d'itération à 10000 et thinnning de 10.
 
 Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
@@ -1259,22 +1232,24 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
-```{r}
 model4_bis_fit
 ```
+
 ###### Rhat: détecte si problème de convergence
 
-Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
-Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine
+(entre les chaines et au sein des chaines) à la variabilité intra
+chaine. Condition nécessaire pour atteindre la convergence: Rhat \<1.1.
+Mais attention, cela nous indique uniquement si la chaine n'a pas
+convergé. On ne peut pas être certain de la convergence même si le
+critère est \<1.1.
 
--> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
-Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
-
-
-
-
+-\> Valeur proche 1 : indique convergence probable. Acceptable si
+inférieur à 1.1 Ici on a une valeur proche de 1. Rien à signaler
+d'anormal pour la convergence.
 
 #### Model selection: Compute WAIC criterion
+
 ```{r}
 samples <- jags.samples(model4_bis_fit$model,c("WAIC","deviance"), type = "mean",
 n.iter = 6000,
@@ -1294,6 +1269,7 @@ waic<-as.data.frame(waic)
 waic_save<-rbind(waic_save,waic)
                      
 ```
+
 #### The results: look to posterior distributions
 
 ```{r}
@@ -1302,18 +1278,13 @@ hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
 plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
-
 ### Model 5_bis
-Y~ Poisson (T * u)
-log (u) = a0 +  Ey + a1*P+ log(A)
-Prior:
-  a0~ N(0,sd=10)
-  a1~ N(0,sd=10)
-  Ey~ N(mu.y,tau.y) #tau.es = 1/variance=sigma.ey²
-      mu.y~N(0,sd=10)
-      tau.y <- 1 / (sigma.y * sigma.y)
-      sigma.es~Unif(0,100)
-  
+
+Y\~ Poisson (T \* u) log (u) = a0 + Ey + a1*P+ log(A) Prior: a0\~
+N(0,sd=10) a1\~ N(0,sd=10) Ey\~ N(mu.y,tau.y) #tau.es =
+1/variance=sigma.ey² mu.y\~N(0,sd=10) tau.y \<- 1 / (sigma.y* sigma.y)
+sigma.es\~Unif(0,100)
+
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
@@ -1325,8 +1296,8 @@ nbyear<-length(unique(data$year))
 mydata<-list(y=y,x=x,n=length(y),N=taillepop,A=A,year=yearID,nbyear=nbyear)
 ```
 
-
 #### Write the model:
+
 ```{r}
 model_5_bis<-function(){
   # likelihood
@@ -1347,10 +1318,10 @@ model_5_bis<-function(){
 }
 ```
 
-
 #### Specify info to Jags
-Initial values:
-We specify the initial values for 3 markov chains:
+
+Initial values: We specify the initial values for 3 markov chains:
+
 ```{r}
 init1 <- list(a1=0,mu.y=1,sigma.y=0.5)
 init2 <- list(a1=1,mu.y=-3,sigma.y=1.5)
@@ -1359,11 +1330,13 @@ init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
+
 ```{r}
 params <- c("a1","mu.y","sigma.y")
 ```
 
 #### Fit the model with Jags
+
 ```{r}
 model5_bis_fit <- jags(data = mydata,
                              inits = init,
@@ -1375,8 +1348,6 @@ model5_bis_fit <- jags(data = mydata,
                              n.thin = 100)
 ```
 
-
-
 ```{r}
 model5_bis_fit
 ```
@@ -1384,15 +1355,13 @@ model5_bis_fit
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
+
 ```{r}
 traceplot(model5_bis_fit,mfrow=c(1,2),varname=c("a1","mu.y","sigma.y"),ask=FALSE)
-````
 
 Le mixage semble ok.
 
-````{r}
 autocorr.plot(as.mcmc(model5_bis_fit),ask=FALSE)
-````
 Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelation. Je décide d'augmenter le nombre d'itération à 10000 et thinnning de 10.
 
 Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
@@ -1403,22 +1372,24 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
-```{r}
 model5_bis_fit
 ```
+
 ###### Rhat: détecte si problème de convergence
 
-Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
-Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine
+(entre les chaines et au sein des chaines) à la variabilité intra
+chaine. Condition nécessaire pour atteindre la convergence: Rhat \<1.1.
+Mais attention, cela nous indique uniquement si la chaine n'a pas
+convergé. On ne peut pas être certain de la convergence même si le
+critère est \<1.1.
 
--> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
-Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
-
-
-
-
+-\> Valeur proche 1 : indique convergence probable. Acceptable si
+inférieur à 1.1 Ici on a une valeur proche de 1. Rien à signaler
+d'anormal pour la convergence.
 
 #### Model selection: Compute WAIC criterion
+
 ```{r}
 samples <- jags.samples(model5_bis_fit$model,c("WAIC","deviance"), type = "mean",
 n.iter = 100000,
@@ -1438,6 +1409,7 @@ waic<-as.data.frame(waic)
 #waic_save<-rbind(waic_save,waic)
                      
 ```
+
 #### The results: look to posterior distributions
 
 ```{r}
@@ -1446,23 +1418,14 @@ hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
 plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
+DO NOT CONVERGE WELL (random effect on year) \### Model 6_bis Y\~
+Poisson (T \* u) log (u) = a0 + Es + Ey + a1*P+ log(A) Prior: a0\~
+N(0,sd=10) a1\~ N(0,sd=10) Es\~ N(mu.es,tau.es) #tau.es =
+1/variance=sigma.es² mu.es\~N(0,sd=10) tau.es \<- 1 / (sigma.es*
+sigma.es) sigma.es\~Unif(0,100) Ey\~ N(mu.y,tau.y) #tau.es =
+1/variance=sigma.ey² mu.y\~N(0,sd=10) tau.y \<- 1 / (sigma.y \* sigma.y)
+sigma.es\~Unif(0,100)
 
- DO NOT CONVERGE WELL (random effect on year)
-### Model 6_bis 
-Y~ Poisson (T * u)
-log (u) = a0 + Es + Ey + a1*P+ log(A)
-Prior:
-  a0~ N(0,sd=10)
-  a1~ N(0,sd=10)
-  Es~ N(mu.es,tau.es) #tau.es = 1/variance=sigma.es²
-      mu.es~N(0,sd=10)
-      tau.es <- 1 / (sigma.es * sigma.es)
-      sigma.es~Unif(0,100)
-  Ey~ N(mu.y,tau.y) #tau.es = 1/variance=sigma.ey²
-      mu.y~N(0,sd=10)
-      tau.y <- 1 / (sigma.y * sigma.y)
-      sigma.es~Unif(0,100)
-  
 ```{r}
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
@@ -1474,8 +1437,8 @@ nbyear<-length(unique(data$year))
 mydata<-list(y=y,x=x,n=length(y),N=taillepop,A=A,nbsites=nbsites,sites=sites,year=yearID,nbyear=nbyear)
 ```
 
-
 #### Write the model:
+
 ```{r}
 model_6_bis<-function(){
   # likelihood
@@ -1502,10 +1465,10 @@ model_6_bis<-function(){
 }
 ```
 
-
 #### Specify info to Jags
-Initial values:
-We specify the initial values for 3 markov chains:
+
+Initial values: We specify the initial values for 3 markov chains:
+
 ```{r}
 init1 <- list(mu.a=-4,sigma.a=0.5,a1=0,mu.y=1,sigma.y=0.5)
 init2 <- list(mu.a=-3,sigma.a=1.5,a1=1,mu.y=-3,sigma.y=1.5)
@@ -1514,11 +1477,13 @@ init <- list(init1,init2,init3)
 ```
 
 Parameters to monitor :
+
 ```{r}
 params <- c("mu.a","sigma.a","a1","mu.y","sigma.y")
 ```
 
 #### Fit the model with Jags
+
 ```{r}
 model6_bis_fit <- jags(data = mydata,
                              inits = init,
@@ -1530,8 +1495,6 @@ model6_bis_fit <- jags(data = mydata,
                              n.thin = 1000)
 ```
 
-
-
 ```{r}
 model6_bis_fit
 ```
@@ -1539,16 +1502,14 @@ model6_bis_fit
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
+
 ```{r}
 traceplot(model6_bis_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a","a1","mu.y","sigma.y"),ask=FALSE)
 plot(as.mcmc(model6_bis_fit))
-````
 
 Le mixage semble ok.
 
-````{r}
 autocorr.plot(as.mcmc(model6_bis_fit),ask=FALSE)
-````
 Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelation. Je décide d'augmenter le nombre d'itération à 10000 et thinnning de 10.
 
 Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
@@ -1559,22 +1520,24 @@ The effective sample size n.eff mesure la longueur de la chaine nécessaire en p
 Le critère généralement choisit est de n.eff >100.
 Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
 
-```{r}
 model5_bis_fit
 ```
+
 ###### Rhat: détecte si problème de convergence
 
-Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
-Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine
+(entre les chaines et au sein des chaines) à la variabilité intra
+chaine. Condition nécessaire pour atteindre la convergence: Rhat \<1.1.
+Mais attention, cela nous indique uniquement si la chaine n'a pas
+convergé. On ne peut pas être certain de la convergence même si le
+critère est \<1.1.
 
--> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
-Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
-
-
-
-
+-\> Valeur proche 1 : indique convergence probable. Acceptable si
+inférieur à 1.1 Ici on a une valeur proche de 1. Rien à signaler
+d'anormal pour la convergence.
 
 #### Model selection: Compute WAIC criterion
+
 ```{r}
 samples <- jags.samples(model5_bis_fit$model,c("WAIC","deviance"), type = "mean",
 n.iter = 6000,
@@ -1594,6 +1557,7 @@ waic<-as.data.frame(waic)
 #waic_save<-rbind(waic_save,waic)
                      
 ```
+
 #### The results: look to posterior distributions
 
 ```{r}
@@ -1602,31 +1566,37 @@ hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
 plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
-
- DO NOT CONVERGE WELL (random effect on year and site)
-## Part 2: more graph and test for model validation of Model2_bis and model4_bis (same as part assessing convergence for each model but with more beautiful graph)
-### Chaine mixing et model validation::
-Comparons 
-Model 2_bis 
-Modèle 4_bis 
+DO NOT CONVERGE WELL (random effect on year and site) \## Part 2: more
+graph and test for model validation of Model2_bis and model4_bis (same
+as part assessing convergence for each model but with more beautiful
+graph) \### Chaine mixing et model validation:: Comparons Model 2_bis
+Modèle 4_bis
 
 ```{r}
 plot(as.mcmc(model2_bis_fit))
 plot(as.mcmc(model4_bis_fit))
 ```
+
 Les chaines semblent well mixted et stable pour le modèle 2bis_fit.
 
-### Test autocorrelation (déjà fait plus haut juste  autre méthode)
+### Test autocorrelation (déjà fait plus haut juste autre méthode)
+
 ```{r}
 autocorr.diag(as.mcmc(model2_bis_fit))
 autocorr.diag(as.mcmc(model4_bis_fit))
 ```
+
 Seems ok.
 
-
-
 ### Test résidus pour model2_bis
-One very important model validation procedure is to examine a plot of residuals against predicted or fitted values (the residual plot). Ideally, residual plots should show a random scatter of points without outliers. That is, there should be no patterns in the residuals. Patterns suggest inappropriate linear predictor (or scale) and/or inappropriate residual distribution/link function.
+
+One very important model validation procedure is to examine a plot of
+residuals against predicted or fitted values (the residual plot).
+Ideally, residual plots should show a random scatter of points without
+outliers. That is, there should be no patterns in the residuals.
+Patterns suggest inappropriate linear predictor (or scale) and/or
+inappropriate residual distribution/link function.
+
 ```{r}
 mydata<-list(y=y,x=x,n=length(y),N=120,A=A)
 coefs <- model2_bis_fit$BUGSoutput$sims.matrix[,1:2]
@@ -1642,36 +1612,40 @@ Resid <- -1*sweep(expY,2,dat$y,'-')/sqrt(varY)
 #plot residuals vs expected values
 plot(apply(Resid,2,mean)~apply(eta,2,mean))
 ```
+
 On a l'air de voir des patterns vers la gauche ? ce qui n'est pas idéal.
 
-
-
-
-
-
 ## Part 2: Model Selection: WAIC criterion
+
 ```{r}
 waic_save
 model_DIC<-c(model1_fit$BUGSoutput$DIC,model1_bis_fit$BUGSoutput$DIC,model2_fit$BUGSoutput$DIC,model2_bis_fit$BUGSoutput$DIC,model3_fit$BUGSoutput$DIC,model3_bis_fit$BUGSoutput$DIC,model4_fit$BUGSoutput$DIC,model4_bis_fit$BUGSoutput$DIC)
 CRITERIA_modelselection<-cbind(waic_save,model_DIC)
+CRITERIA_modelselection$Modelname <- factor(CRITERIA_modelselection$Modelname, levels = CRITERIA_modelselection$Modelname[order(CRITERIA_modelselection$waic)])
+ggplot(CRITERIA_modelselection,aes(x=Modelname,y=waic)) + theme_bw() + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle=70, hjust=1))
+
+
 ```
 
-Model 2_bis semble être le mieux fit au data selon les critères. 
-Modèle 4_bis est assez proche également.
+Model 2_bis semble être le mieux fit au data selon les critères. Modèle
+4_bis est assez proche également.
 
 ## Part 1/2: look for overdipersion:
-Poisson regression: hypothèse de base est que variance=mean. Donc dispersion = 1.
 
-Explore potential for overdispersion in data:
-Source: https://www.flutterbys.com.au/stats/tut/tut10.6b.html
+Poisson regression: hypothèse de base est que variance=mean. Donc
+dispersion = 1.
+
+Explore potential for overdispersion in data: Source:
+<https://www.flutterbys.com.au/stats/tut/tut10.6b.html>
 
 ```{r}
 boxplot(data$shells, horizontal=TRUE)
 rug(jitter(data$shells), side=1)
 hist(data$shell)
 ```
-Il semble y avoir beaucoup de 0 dans les données = potentiel overdispersion.
-Explore zero inflation:
+
+Il semble y avoir beaucoup de 0 dans les données = potentiel
+overdispersion. Explore zero inflation:
 
 ```{r}
 #proportion of 0's in the data
@@ -1684,8 +1658,10 @@ cnts <- rpois(1000, mu)
 dat.tab <- table(cnts == 0)
 dat.tab/sum(dat.tab)
 ```
-The value under TRUE is the proportion of zero value in the data.
-The proportion of the value is the data do not correspond to the low proportion expected for a poisson distribution.
+
+The value under TRUE is the proportion of zero value in the data. The
+proportion of the value is the data do not correspond to the low
+proportion expected for a poisson distribution.
 
 ```{r}
 # Fit model frequentist approach
@@ -1739,11 +1715,7 @@ library(lmtest)
 lrtest(M3, M4)
 ```
 
-
-
-
-To do: 
-- Faire graphiques pour Result
+To do: - Faire graphiques pour Result
 
 ## Result of model 2bis visualization
 
