@@ -16,8 +16,7 @@ Article: Upper respiratory tract disease, force of infection, and effects on sur
 ```{r}
 library(ggplot2)
 library(dplyr)
-install.packages("rjags")
-library(rjags)
+library(R2jags)
 ```
 
 
@@ -28,7 +27,8 @@ Lisez les données, et assurez vous que les variables sont au bon format. Calcul
 
 ```{r}
 
-setwd("C:/Users/clarr/Documents/GitHub/bayesian-m2_dm")
+#setwd("C:/Users/clarr/Documents/GitHub/bayesian-m2_dm")
+setwd("C:/Users/orian/OneDrive/Documents/bayesian-m2_dm")
 data<-read.csv2("gopher.csv")
 str(data)
 data$prev<-as.numeric(data$prev)
@@ -68,6 +68,12 @@ ggplot(data, aes(x=Site, y=prev, fill=Site)) +
        y="Seroprevalence")+
   theme_bw()
 
+ggplot(data, aes(x=Site, y=shells/taillepop, fill=Site)) + 
+  geom_boxplot(show.legend = F)+
+  labs(title="Figure 1 : Shells per individual at each site", 
+       x="Sites",
+       y="Shell per individual")+
+  theme_bw()
 
 ggplot(data, aes(x=prev, y=shells/taillepop, color=year)) + 
   geom_point(show.legend = T, size=6)+
@@ -75,8 +81,20 @@ ggplot(data, aes(x=prev, y=shells/taillepop, color=year)) +
        x="Seroprevalence",
        y="Shell per individual")+
   theme_bw()
+
+ggplot(data, aes(x=prev, y=shells/taillepop, color=Site)) + 
+  geom_point(show.legend = T, size=6)+
+   labs(title="Figure 3 : Shell remains per individual for each year of the study along Mycoplasma agassizii seroprevalence", 
+       x="Seroprevalence",
+       y="Shell per individual")+
+  theme_bw()
   
 
+```
+```{r}
+summary(data)
+
+ggplot(data, aes(shells, color = Site,fill=taillepop)) + geom_histogram(binwidth = 1) 
 ```
 
 ## Part 2 : Models implementation
@@ -461,7 +479,7 @@ plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
 
-### Model 2_bis
+### Model 2_bis - prior sd 10
 Y~ Poisson (T * u)
 log (u) = a0 + a1 P + log(A)
 Prior:
@@ -570,6 +588,129 @@ tmp <- sapply(samples, sum)
 waic <- round(c(waic = tmp[["waic"]], p_waic = tmp[["p_waic"]],deviance = tmp[["deviance"]]),1)
 waic$Modelname<-"model2_bis"
 waic$prior<-"a0~ N(0,sd=10) / a1~ N(0,sd=10)"
+# Save the result:
+waic<-as.data.frame(waic)
+waic_save<-rbind(waic_save,waic)
+                     
+```
+#### The results: look to posterior distributions
+
+```{r}
+# have a look to posterior distribution
+hist(model2_bis_fit$BUGSoutput$sims.matrix[,"a0"])
+plot(density(model2_bis_fit$BUGSoutput$sims.matrix[,"a0"]))
+```
+
+ 
+### Model 2_bis - prior sd 1000
+Y~ Poisson (T * u)
+log (u) = a0 + a1 P + log(A)
+Prior:
+  a0~ N(0,sd=1000)
+  a1~ N(0,sd=1000)
+  
+```{r}
+#Create dataframe of data for this model:
+A<-as.numeric(data$Area)
+mydata<-list(y=y,x=x,n=length(y),N=taillepop,A=A)
+```
+
+
+#### Write the model:
+```{r}
+model_2_bis_bis<-function(){
+  # likelihood
+  for(i in 1:n){
+    y[i] ~ dpois(lambda[i]) #likelihood
+    lambda[i]<-N[i]*u[i]
+    log(u[i]) <- a0 + a1*x[i]+ log(A[i])
+  }
+  # priors
+  a0 ~ dnorm(0,0.001) # sd=10
+  a1 ~ dnorm(0,0.001) 
+}
+```
+
+
+#### Specify info to Jags
+Initial values:
+We specify the initial values for 3 markov chains:
+```{r}
+init1 <- list(a0 = -4,a1=0)
+init2 <- list(a0 = -3,a1=1)
+init3 <- list(a0 = -2,a1=-1)
+init <- list(init1,init2,init3)
+```
+
+Parameters to monitor :
+```{r}
+params <- c("a0","a1")
+```
+
+#### Fit the model with Jags
+```{r}
+model2_bis_bis_fit <- jags(data = mydata,
+                             inits = init,
+                             parameters.to.save = params,
+                             model.file = model_2_bis_bis,
+                             n.chains = 3,
+                             n.iter = 6000,
+                             n.burnin = 3000,
+                             n.thin = 1)
+```
+
+
+
+```{r}
+model2_bis_bis_fit
+```
+
+#### Assess convergence
+
+##### Qualitativement par des graphiques:
+```{r}
+traceplot(model2_bis_fit,mfrow=c(1,2),varname=c("a0","a1"),ask=FALSE)
+````
+Selon ce graphique, les 3 chaines mixent bien.
+Le choix du nombre de burnin semble être assez long pour discard les samples pris avant d'atteindre la distribution stationnaire postérieure. 
+
+````{r}
+autocorr.plot(as.mcmc(model2_bis_fit),ask=FALSE)
+````
+On observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
+
+##### Quantitativement:
+###### N.eff : nb itérations ok pour limiter effet autocorrelation chaine
+The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
+Le critère généralement choisit est de n.eff >100.
+Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
+
+```{r}
+model2_bis_bis_fit
+```
+###### Rhat: détecte si problème de convergence
+
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
+Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+
+-> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
+Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
+
+
+
+#### Model selection: Compute WAIC criterion
+```{r}
+samples <- jags.samples(model2_bis_bis_fit$model,c("WAIC","deviance"), type = "mean",
+n.iter = 6000,
+n.burnin = 3000,
+n.thin = 1)
+samples$p_waic <- samples$WAIC #Close to number of parameters but not really
+# Calculate the true AIC:
+samples$waic <- samples$deviance + samples$p_waic
+tmp <- sapply(samples, sum)
+waic <- round(c(waic = tmp[["waic"]], p_waic = tmp[["p_waic"]],deviance = tmp[["deviance"]]),1)
+waic$Modelname<-"model2_bis_bis"
+waic$prior<-"a0~ N(0,sd=1000) / a1~ N(0,sd=1000)"
 # Save the result:
 waic<-as.data.frame(waic)
 waic_save<-rbind(waic_save,waic)
@@ -1162,7 +1303,152 @@ plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
 
-### Model 5_bis - DO NOT CONVERGE - PROBLEM - TO DELETE
+### Model 5_bis
+Y~ Poisson (T * u)
+log (u) = a0 +  Ey + a1*P+ log(A)
+Prior:
+  a0~ N(0,sd=10)
+  a1~ N(0,sd=10)
+  Ey~ N(mu.y,tau.y) #tau.es = 1/variance=sigma.ey²
+      mu.y~N(0,sd=10)
+      tau.y <- 1 / (sigma.y * sigma.y)
+      sigma.es~Unif(0,100)
+  
+```{r}
+#Create dataframe of data for this model:
+A<-as.numeric(data$Area)
+nbsites<-length(unique(data$Site))
+sites<-as.numeric(data$Site)
+yearID<-data %>% group_by(year)%>% mutate(year_id = cur_group_id())
+yearID<-yearID$year_id
+nbyear<-length(unique(data$year))
+mydata<-list(y=y,x=x,n=length(y),N=taillepop,A=A,year=yearID,nbyear=nbyear)
+```
+
+
+#### Write the model:
+```{r}
+model_5_bis<-function(){
+  # likelihood
+  for(i in 1:n){
+    y[i] ~ dpois(lambda[i]) #likelihood
+    lambda[i]<-N[i]*u[i]
+    log(u[i]) <-ab[year[i]] + a1*x[i] + log(A[i]) 
+  }
+
+  for(f in 1:nbyear){
+    ab[f] ~ dnorm(mu.y,tau.y)
+  } # For random effect of year
+  # priors
+  a1 ~ dnorm(0,0.1)
+  mu.y ~ dnorm(0,0.1)
+  tau.y <- 1 / (sigma.y * sigma.y)
+  sigma.y ~ dunif(0,100)
+}
+```
+
+
+#### Specify info to Jags
+Initial values:
+We specify the initial values for 3 markov chains:
+```{r}
+init1 <- list(a1=0,mu.y=1,sigma.y=0.5)
+init2 <- list(a1=1,mu.y=-3,sigma.y=1.5)
+init3 <- list(a1=0.5,mu.y=-2,sigma.y=3)
+init <- list(init1,init2,init3)
+```
+
+Parameters to monitor :
+```{r}
+params <- c("a1","mu.y","sigma.y")
+```
+
+#### Fit the model with Jags
+```{r}
+model5_bis_fit <- jags(data = mydata,
+                             inits = init,
+                             parameters.to.save = params,
+                             model.file = model_5_bis,
+                             n.chains = 3,
+                             n.iter = 200000,
+                             n.burnin = 5000,
+                             n.thin = 100)
+```
+
+
+
+```{r}
+model5_bis_fit
+```
+
+#### Assess convergence
+
+##### Qualitativement par des graphiques:
+```{r}
+traceplot(model5_bis_fit,mfrow=c(1,2),varname=c("a1","mu.y","sigma.y"),ask=FALSE)
+````
+
+Le mixage semble ok.
+
+````{r}
+autocorr.plot(as.mcmc(model5_bis_fit),ask=FALSE)
+````
+Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelation. Je décide d'augmenter le nombre d'itération à 10000 et thinnning de 10.
+
+Cependant, on observe une autocorrelation limitée, le nombre d'itérations spécifié semble convenir.
+
+##### Quantitativement:
+###### N.eff : nb itérations ok pour limiter effet autocorrelation chaine
+The effective sample size n.eff mesure la longueur de la chaine nécessaire en prenant en compte la corrélation entres celle ci. 
+Le critère généralement choisit est de n.eff >100.
+Ici on a bien nf >100. Donc le nombre d'itération est suffisant pour obtenir des estimateurs représentatif de la distribution postérieure.
+
+```{r}
+model5_bis_fit
+```
+###### Rhat: détecte si problème de convergence
+
+Rhat mesure le ratio de la variabilité totale combinant multiple chaine (entre les chaines et au sein des chaines) à la variabilité intra chaine. 
+Condition nécessaire pour atteindre la convergence: Rhat <1.1. Mais attention, cela nous indique uniquement si la chaine n'a pas convergé. On ne peut pas être certain de la convergence même si le critère est <1.1.
+
+-> Valeur proche 1 : indique convergence probable. Acceptable si inférieur à 1.1
+Ici on a une valeur proche de 1. Rien à signaler d'anormal pour la convergence. 
+
+
+
+
+
+#### Model selection: Compute WAIC criterion
+```{r}
+samples <- jags.samples(model5_bis_fit$model,c("WAIC","deviance"), type = "mean",
+n.iter = 100000,
+n.burnin = 5000,
+n.thin = 100)
+samples$p_waic <- samples$WAIC #number of parameters
+# Calculate the true AIC:
+samples$waic <- samples$deviance + samples$p_waic
+tmp <- sapply(samples, sum)
+waic <- round(c(waic = tmp[["waic"]], p_waic = tmp[["p_waic"]],deviance = tmp[["deviance"]]),1)
+waic$Modelname<-"model5_bis"
+waic$prior<-" mu.a~N(0,sd=10) // tau.a <- 1 / (sigma.a * sigma.a) //sigma.a~Unif(0,100)// a1~ N(0,sd=10) mu.y~N(0,sd=10) // tau.y <- 1 / (sigma.y * sigma.y) //sigma.y~Unif(0,100)//"
+
+
+# Save the result:
+waic<-as.data.frame(waic)
+#waic_save<-rbind(waic_save,waic)
+                     
+```
+#### The results: look to posterior distributions
+
+```{r}
+# have a look to posterior distribution
+hist(model1_fit$BUGSoutput$sims.matrix[,"a0"])
+plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
+```
+
+
+ DO NOT CONVERGE WELL (random effect on year)
+### Model 6_bis 
 Y~ Poisson (T * u)
 log (u) = a0 + Es + Ey + a1*P+ log(A)
 Prior:
@@ -1181,22 +1467,22 @@ Prior:
 #Create dataframe of data for this model:
 A<-as.numeric(data$Area)
 nbsites<-length(unique(data$Site))
-sites<-as.numeric(data$Site)
+sites<-as.numeric(as.factor(data$Site))
 yearID<-data %>% group_by(year)%>% mutate(year_id = cur_group_id())
 yearID<-yearID$year_id
 nbyear<-length(unique(data$year))
-mydata<-list(y=y,x=x,n=length(y),N=120,A=A,nbsites=nbsites,sites=sites,year=yearID,nbyear=nbyear)
+mydata<-list(y=y,x=x,n=length(y),N=taillepop,A=A,nbsites=nbsites,sites=sites,year=yearID,nbyear=nbyear)
 ```
 
 
 #### Write the model:
 ```{r}
-model_5_bis<-function(){
+model_6_bis<-function(){
   # likelihood
   for(i in 1:n){
     y[i] ~ dpois(lambda[i]) #likelihood
-    lambda[i]<-N*u[i]
-    log(u[i]) <- a[sites[i]] +ab[year[i]] + a1*x[i] + log(A[i]) 
+    lambda[i]<-N[i]*u[i]
+    log(u[i]) <- a[sites[i]] + ab[year[i]] + a1*x[i] + log(A[i]) 
   }
   for(j in 1:nbsites){
     a[j] ~ dnorm(mu.a,tau.a)
@@ -1234,33 +1520,34 @@ params <- c("mu.a","sigma.a","a1","mu.y","sigma.y")
 
 #### Fit the model with Jags
 ```{r}
-model5_bis_fit <- jags(data = mydata,
+model6_bis_fit <- jags(data = mydata,
                              inits = init,
                              parameters.to.save = params,
                              model.file = model_5_bis,
                              n.chains = 3,
-                             n.iter = 6000,
-                             n.burnin = 3000,
-                             n.thin = 1)
+                             n.iter = 200000,
+                             n.burnin = 5000,
+                             n.thin = 1000)
 ```
 
 
 
 ```{r}
-model5_bis_fit
+model6_bis_fit
 ```
 
 #### Assess convergence
 
 ##### Qualitativement par des graphiques:
 ```{r}
-traceplot(model5_bis_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a","a1","mu.y","sigma.y"),ask=FALSE)
+traceplot(model6_bis_fit,mfrow=c(1,2),varname=c("mu.a","sigma.a","a1","mu.y","sigma.y"),ask=FALSE)
+plot(as.mcmc(model6_bis_fit))
 ````
 
 Le mixage semble ok.
 
 ````{r}
-autocorr.plot(as.mcmc(model5_bis_fit),ask=FALSE)
+autocorr.plot(as.mcmc(model6_bis_fit),ask=FALSE)
 ````
 Avec les valeurs :n.iter = 6000, n.burnin = 3000, j'observe pas mal d'autocorrelation. Je décide d'augmenter le nombre d'itération à 10000 et thinnning de 10.
 
@@ -1316,7 +1603,7 @@ plot(density(model1_fit$BUGSoutput$sims.matrix[,"a0"]))
 ```
 
 
-
+ DO NOT CONVERGE WELL (random effect on year and site)
 ## Part 2: more graph and test for model validation of Model2_bis and model4_bis (same as part assessing convergence for each model but with more beautiful graph)
 ### Chaine mixing et model validation::
 Comparons 
@@ -1401,12 +1688,56 @@ The value under TRUE is the proportion of zero value in the data.
 The proportion of the value is the data do not correspond to the low proportion expected for a poisson distribution.
 
 ```{r}
-#summary(model2_bis_fit)
-library(BayesianTools)
-Samples<-coda.samples(model2_bis_fit$model,variable.names = params, n.iter = 5000)
-x = BayesianTools::getSample(Samples)
-```
+# Fit model frequentist approach
+M1 <- glm(shells ~prev,
+          family = 'poisson',
+          data = data)
 
+summary(M1)
+# Check for over/underdispersion in the model
+E2 <- resid(M1, type = "pearson")
+N  <- nrow(data)
+p  <- length(coef(M1))   
+sum(E2^2) / (N - p)
+# Look like our model produce overdispersion.
+# Let's try negative binomial approach
+library(MASS)
+M2 <- glm.nb(shells ~prev,
+             data = data)
+
+summary(M2)
+# Dispersion statistic
+E2 <- resid(M2, type = "pearson")
+N  <- nrow(data)
+p  <- length(coef(M2)) + 1  # '+1' is for variance parameter in NB
+sum(E2^2) / (N - p)
+# more overdispersion with binomial negative
+library(pscl)
+M3 <- zeroinfl(shells ~prev| ## Predictor for the Poisson process
+                 prev, ## Predictor for the Bernoulli process;
+               dist = 'poisson',
+               data = data)
+
+summary(M3)
+# Dispersion statistic
+E2 <- resid(M3, type = "pearson")
+N  <- nrow(data)
+p  <- length(coef(M3))  
+sum(E2^2) / (N - p)
+
+M4 <- zeroinfl(shells ~prev |
+                 prev,
+               dist = 'negbin',
+               data = data)
+summary(M4)
+#Dispersion Statistic
+E2 <- resid(M4, type = "pearson")
+N  <- nrow(data)
+p  <- length(coef(M4)) + 1 # '+1' is due to theta
+sum(E2^2) / (N - p)
+library(lmtest)
+lrtest(M3, M4)
+```
 
 
 
