@@ -1,0 +1,188 @@
+---
+title: "Report : "
+author: "orianebasso"
+date: "2022-12-24"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,echo=FALSE}
+require(knitr)
+require(kableExtra)
+library(ggplot2)
+```
+# Introduction
+
+We will focus on article 3: "Upper respiratory tract disease, force of infection, and effects on survival of gopher tortoises". Based on this article and the available data, we choose to answer the following question: Does seroprevalence by site by year influence mortality? Mortality is approximated by shell remains count data.
+
+
+# Partie 1: Lecture, exploration des données
+
+### Mise en forme des données
+
+```{r}
+
+#setwd("C:/Users/clarr/Documents/GitHub/bayesian-m2_dm")
+setwd("C:/Users/orian/OneDrive/Documents/bayesian-m2_dm")
+data<-read.csv2("gopher.csv")
+str(data)
+data$prev<-as.numeric(data$prev)
+data$Area<-as.numeric(data$Area)
+data$year<-as.factor(data$year)
+data$density<-as.numeric(data$density)
+data$taillepop<-data$density*data$Area
+taillepop<-data$taillepop
+names(data)[1]<-"Site"
+
+```
+
+As the authors point out in their article, the data collected is limited: 3 years of data from 10 sites. We are particularly interested in the "shells" and "prev" variables (shell remains and seroprevalence).
+
+
+```{r}
+ggplot(data, aes(x=Site, y=shells/taillepop, fill=Site)) + 
+  geom_boxplot(show.legend = F)+
+  labs(title="Figure 1 : Shells per individual at each site", 
+       x="Sites",
+       y="Shell per individual")+
+  theme_bw()
+
+mean(data$shells/taillepop)
+sd(data$shells/taillepop)
+
+```
+
+The number of shell remains per individual is heterogeneous between each site (Fig. 1). At the BS, Cent and TE sites less than 0.005 carapaces per individual are counted. The CF site is the site where the variable has the highest values.
+
+```{r}
+ggplot(data, aes(x=Site, y=prev, fill=Site)) + 
+  geom_boxplot(show.legend = F)+
+  labs(title="Figure 2 : Mycoplasma agassizii seroprevalence at each site", 
+       x="Sites",
+       y="Seroprevalence")+
+  theme_bw()
+```
+
+Seroprevalence is also heterogeneous between sites (Fig. 2). Moreover, it varies within some sites (Cent, FC, Old), while the standard deviation seems very low in other sites (BS, FE, Ord). The CF site shows the highest seroprevalence, which together with the previous observation (Fig. 1) reinforces the hypothesis that seroprevalence is positively correlated with the number of shell remains.
+
+```{r}
+
+ggplot(data, aes(x=prev, y=shells/taillepop, color=year)) + 
+  geom_point(show.legend = T, size=6)+
+   labs(title="Figure 3 : Shell remains per individual for each year of the study along Mycoplasma agassizii seroprevalence", 
+       x="Seroprevalence",
+       y="Shell per individual")+
+  theme_bw()
+  
+
+```
+This last hypothesis is also justified by Figure 3, which seems to show a slight positive slope in the shell/idv ~seroprevalence relationship. This slope varies according to the year but the trend is still present, justifying our hypothesis.
+
+```{r}
+summary(data)
+table(data$shells)
+``` 
+Nine 0 are found in the shell count data, which may cause overdispersion and cause problems in the analysis. We are aware of this problem but since the work requested is not hypothesis testing, we choose to ignore this effect and return to it in the discussion.
+
+
+# Part 2 : Simple model adjusment
+
+To answer our question we decided to used the following generalized linear model.
+We assumed that the number of shell remains collected at a site s in a year y followed a Poisson distribution. 
+The poisson distribution is used to model count data. Using a Poisson distribution underlie several assumptions : 
+   - the observations musts be independent from one another
+   - the mean and the variance of a Poisson random variable must be equal,wWhich can be translated as the dispersion must be equal to one.
+
+$$
+S_{ys} \sim Poisson(T_{ys}u_{iys})
+$$
+
+
+$$
+log(u_{iys})=a_{site_i}+\beta P_{ys}+log(A_{s})
+$$
+
+Where T is the total population size. The linear dependency of the mean of shell remains per individual per site and year $u_{iys}$ was a log link function.
+We decided to implement a fixed effet $\beta$ for the seroprevalence P and a random effect of the site on the intercept $a_{site_i}$ as requested.
+An offset on the area A of each site was implemented in order to account for sampling effort (which we are not interested to model) Fixed coefficient. 
+
+
+By using this model, our hypothesis is that the prevalence at site i year y can explain a significant part of the variance in the mean number of shell remains at site i year y.
+
+By using random intercept our hypothesis is that there is some site-to-site variability that cannot be accounted by the prevalence or by random Poisson variation around the mean of shells remains. In this case incorporating random effect will improve our ability to make broader inference about the effect of prevalence on the response variable. 
+
+We choosed to implement our work in a Bayesian framework and thus specified the following weak priors as we do not have prior knowledge on these parameters :
+$$
+a_{j} \sim N(\mu_s,\sigma_s)
+$$
+$$
+\mu_s ~ \sim N(0,10)
+$$
+$$
+\sigma_s ~ \sim unif(0,100)
+$$
+
+These priors were also chosen based on those used in the article.
+
+# Part 3 : Model comparison and selection
+
+  
+```{r,echo=FALSE}
+
+Modelname<-c("1","1bis","2","2bis","3","3bis","4","4bis")
+logu<-c("a0+\beta P_{ys}","a0+\beta P_{ys}+log(A_{s})","2","2bis","a_{site_i}","a_{site_i}+log(A_{s})","a_{site_i}+\beta P_{ys}","a_{site_i}+\beta P_{ys}+log(A_{s})")
+Fixedeffect<-c("None","None","Prevalence","Prevalence","None","None","","")
+Randomeffect<-c("","","","","","","","")
+Priors<-c("")s
+
+name colonne: log(u_{iys})
+
+#head(iris) %>% kable( format = "markdown",booktable = TRUE,caption = "Ma table")
+
+
+```
+Models easily converged. 
+
+We used the model comparison criteria available in Table 1. As seen in practice, we chose WAIC (Widely-Applicable Information Criteria) as our main discriminant criteria.
+
+From this perspective, the best model is model2_bis (intercept + prevalence fixed effect + offset) with a 83.4 WAIC, closely followed by model4_bis () (most complete model : intercept + fixed prevalence effect + random site effect + offset) with its 84.8 WAIC. Devience information criteria emphasize this conclusion, but does not help to discriminate these two option.
+
+
+# Part 4 : Inference and interpretation of results
+
+Model 2 bis and 4 bis estimates are available in Table 2 and 3.
+
+
+$$
+M_{2 bis} \sim a_{0}= -7.738 ; a{1}=0.414
+$$
+$$
+M_{4 bis} \sim a_{1}= 0.445 ; \mu_{a} =-7.755; \sigma_{a}=0.286
+$$
+The effect of seroprevalence we detected is 10 times greater than in the article (0.445 versus 0.02) . Our results give approximatly a 40% increase in shells/individual per percentage point increase in seroprevalence. To replicate their example with our model 2 bis results, in a site with 120 tortoises and an increase from 0 to 70% seroprevalence, the shell remains increase from $120 * e^{-7.738}=0.051$ shells to $120 * e^{-7.738+70*0.414}=2.01588.e^{11}$ shells wich is biologically impossible in a 120 tortoises population.
+Estimations are worse with model 4 bis, going from $120 * e^{-7.738}=0.052$ shells to $120 * e^{-7.738+70*0.414}=1.735804.e^{12}$
+
+
+
+```{r} 
+#A ENLEVER, pour calculer les resultats au dessus
+#120*exp(-7.755+70*0.445)
+```
+
+
+
+#Part 5 :  Discussion
+
+Our result are very different from the paper for several reasons: 
+
+First, we did not include random effect of year, site, and their interaction. We tried to but unfortunatly our attempt resulted in a model that did not converge. This can explain a part of the difference, but not much since the authors pointed out these effects were small.
+
+Second, we did not test or assess overdispersion which is likely to impact our result as we mentioned earlier due to numerous 0 values in the shell remain count. The authors did mention this issue in their paper. One solution is to use a Negative Binomial distribution, which we did not try.
+
+Other limits we should mention relate to model comparison. We used a different criteria of model selection which did not take into account small sample. The authors chose an AIC corrected for small sample size.
+As often in this type of study, more data would have been a great way to improve the results.
+
+cf https://agabrioblog.onrender.com/tutorial/glm2-jags/glm2-jags/ - zero inflated poisson model.
