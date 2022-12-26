@@ -10,18 +10,96 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r,echo=FALSE}
-library(knitr)
+require(knitr)
 library(kableExtra)
+library(ggplot2)
+library(dplyr)
+library(lme4)
+library(rmarkdown)
+```
+# Introduction
+
+We will focus on article 3: "Upper respiratory tract disease, force of infection, and effects on survival of gopher tortoises". Based on this article and the available data, we choose to answer the following question: Does seroprevalence by site by year influence mortality? Mortality is approximated by shell remains count data.
+
+
+# Partie 1: Lecture, exploration des données
+
+### Mise en forme des données
+
+```{r}
+
+#setwd("C:/Users/clarr/Documents/GitHub/bayesian-m2_dm")
+setwd("C:/Users/orian/OneDrive/Documents/bayesian-m2_dm")
+data<-read.csv2("gopher.csv")
+str(data)
+data$prev<-as.numeric(data$prev)
+data$Area<-as.numeric(data$Area)
+data$year<-as.factor(data$year)
+data$density<-as.numeric(data$density)
+data$taillepop<-data$density*data$Area
+taillepop<-data$taillepop
+names(data)[1]<-"Site"
+
 ```
 
-# Partie 1:
+As the authors point out in their article, the data collected is limited: 3 years of data from 10 sites. We are particularly interested in the "shells" and "prev" variables (shell remains and seroprevalence).
 
-Nombreux 0: peux poser problème car causer de l'overdispersion. Dans ces cas présent, assumption de la loi de poisson ne sera pas respecter. Nous sommes consciente de ce problème mais les consignes indiqué de ne pas vérifier les hypothèses  nous avons choisis d'ignorer cette effet. Nous y reviendrons dans la discussion.
 
-# Model
-To answer this question we decided to used the following generalized linear model.
+```{r}
+ggplot(data, aes(x=Site, y=shells/taillepop, fill=Site)) + 
+  geom_boxplot(show.legend = F)+
+  labs(title="Figure 1 : Shells per individual at each site", 
+       x="Sites",
+       y="Shell per individual")+
+  theme_bw()
+
+mean(data$shells/taillepop)
+sd(data$shells/taillepop)
+
+```
+
+The number of shell remains per individual is heterogeneous between each site (Fig. 1). At the BS, Cent and TE sites less than 0.005 carapaces per individual are counted. The CF site is the site where the variable has the highest values.
+
+```{r}
+ggplot(data, aes(x=Site, y=prev, fill=Site)) + 
+  geom_boxplot(show.legend = F)+
+  labs(title="Figure 2 : Mycoplasma agassizii seroprevalence at each site", 
+       x="Sites",
+       y="Seroprevalence")+
+  theme_bw()
+```
+
+Seroprevalence is also heterogeneous between sites (Fig. 2). Moreover, it varies within some sites (Cent, FC, Old), while the standard deviation seems very low in other sites (BS, FE, Ord). The CF site shows the highest seroprevalence, which together with the previous observation (Fig. 1) reinforces the hypothesis that seroprevalence is positively correlated with the number of shell remains.
+
+```{r}
+
+ggplot(data, aes(x=prev, y=shells/taillepop, color=year)) + 
+  geom_point(show.legend = T, size=6)+
+   labs(title="Figure 3 : Shell remains per individual for each year of the study along Mycoplasma agassizii seroprevalence", 
+       x="Seroprevalence",
+       y="Shell per individual")+
+  theme_bw()
+  
+
+```
+This last hypothesis is also justified by Figure 3, which seems to show a slight positive slope in the shell/idv ~seroprevalence relationship. This slope varies according to the year but the trend is still present, justifying our hypothesis.
+
+```{r}
+summary(data)
+table(data$shells)
+``` 
+Nine 0 are found in the shell count data, which may cause overdispersion and cause problems in the analysis. We are aware of this problem but since the work requested is not hypothesis testing, we choose to ignore this effect and return to it in the discussion.
+
+We do not scale response variable "prevalence" as it is supposed to take values from 0 to 100 and cannot be negative.
+
+
+# Part 2 : Simple model adjusment
+
+To answer our question we decided to use the following generalized linear model.
 We assumed that the number of shell remains collected at a site s in a year y followed a Poisson distribution. 
-The poisson distribution is used to model count data. Using a Poisson distribution underlie several assumptions. The observations musts be independent from one another. The mean and the variance of a poisson random variable must be equal. Which can be translated as the dispersion must be equal to one.
+The poisson distribution is used to model count data. Using a Poisson distribution underlie several assumptions : 
+   - the observations musts be independent from one another
+   - the mean and the variance of a Poisson random variable must be equal, Which can be translated as the dispersion must be equal to one.
 
 $$
 S_{ys} \sim Poisson(T_{ys}u_{iys})
@@ -29,19 +107,18 @@ $$
 
 
 $$
-log(u_{iys})=a_{site_i}+\beta P_{ys}+log(A_{s})
+log(u_{iys})=a_s+a_1  P_{ys}+log(A_{s})
 $$
 
-Where T the total population size. The linear dependency of the mean of shell remains per individual per site and year $u_{iys}$ was a log link function.
- We decided to implement a fixed effet $\beta$ for the seroprevalence P and a random effect of the site on the intercept $a_{site_i}$.
-An offset on the area A of each site was implemented in order to account for sampling effort (which we are not interested to modelize in our model.) Fixed coefficient. 
+Where T is the total population size at site s year y and S shell remains. The linear dependency of the mean of shell remains per individual i per site s and year y $u_{iys}$ was a log link function.
+We decided to implement a fixed effet $a_1$ for the seroprevalence P and a random effect of the site on the intercept $a_s$ as requested.
+An offset on the area A of each site was implemented in order to account for rate of shell remains per surface unit instead of number of shell per site. 
 
-
-By using this model, our hypothesis is that the prevalence can explain part of the variance in the mean number of shell remains o... 
+By using this model, our hypothesis is that the prevalence at site i year y can explain a significant part of the variance in the mean number of shell remains at site i year y.
 
 By using random intercept our hypothesis is that there is some site-to-site variability that cannot be accounted by the prevalence or by random Poisson variation around the mean of shells remains. In this case incorporating random effect will improve our ability to make broader inference about the effect of prevalence on the response variable. 
 
-We choosed to implement our work in a Bayesian framework and thus specified the following weak priors:
+We chose to implement our work in a Bayesian framework and thus specified the following weak priors as we do not have prior knowledge on these parameters :
 $$
 a_{j} \sim N(\mu_s,\sigma_s)
 $$
@@ -49,46 +126,131 @@ $$
 \mu_s ~ \sim N(0,10)
 $$
 $$
-\sigma_s ~ \sim unif(0,100)
+\sigma_s ~ \sim U(0,100)
 $$
+$$
+a_1 ~ \sim N(0,10)
+$$
+For models we will implement without random effect on site for model comparison, we will use the following prior on the intercept $a_0$ :
 
-# Model comparison and selection
+$$
+a_0 ~ \sim N(0,10)
+$$
+These priors were also chosen based on those used in the article.
+
+The 8 different models we ran are detailed in Table 1.
 
 
-  
 ```{r,echo=FALSE}
 
-Modelname<-c("1","1bis","2","2bis","3","3bis","4","4bis")
-logu<-c("a0+\beta P_{ys}","a0+\beta P_{ys}+log(A_{s})","2","2bis","a_{site_i}","a_{site_i}+log(A_{s})","a_{site_i}+\beta P_{ys}","a_{site_i}+\beta P_{ys}+log(A_{s})")
-Fixedeffect<-c("None","None","Prevalence","Prevalence","None","None","","")
-Randomeffect<-c("","","","","","","","")
-Priors<-c("")s
+Modelname <- c("1", "1bis", "2", "2bis", "3", "3bis", "4", "4bis")
+logu <-
+  c(
+    "a0",
+    "a0+log(A)",
+    "a0+a1 P",
+    "a0+a1*P+log(A) ",
+    "aj",
+    "aj+log(A)",
+    "aj+a1 P",
+    "aj+a1 P+log(A)"
+  )
+Fixedeffect <-
+  c(
+    "None",
+    "None",
+    "Prevalence",
+    "Prevalence",
+    "None",
+    "None",
+    "Prevalence",
+    "Prevalence"
+  )
+Randomeffect <-
+  c("None", "None", "None", "None", "Site", "Site", "Site", "Site")
+Priors <-
+  c(
+    "a0 ~ N(0,10)",
+    "a0 ~ N(0,10)",
+    "a0 ~ N(0,10), a1 ~ N(0,10)",
+    "a0 ~ N(0,10), a1 ~ N(0,10)",
+    "aj  N(µ_s,sigma), µ_s ~ N(0,10), sigma ~ U(0,100)",
+    "aj  N(µ_s,sigma), µ_s ~ N(0,10), sigma ~ U(0,100)",
+    "a1 ~ N(0,10), aj  N(µ_s,sigma), µ_s ~ N(0,10), sigma ~ U(0,100)",
+    "a1 ~ N(0,10), aj  N(µ_s,sigma), µ_s ~ N(0,10), sigma ~ U(0,100)"
+  )
 
-name colonne: log(u_{iys})
+model_description<-cbind(Modelname,logu,Fixedeffect,Randomeffect,Priors)%>%as.data.frame()
 
-#head(iris) %>% kable( format = "markdown",booktable = TRUE,caption = "Ma table")
+
+
+model_description %>% kable( format = "markdown",booktable = TRUE,caption = "Table 2 : blablabla")
 
 
 ```
 
+# Part 3 : Model comparison and selection
+
+Models easily converged. 
+
+We used the model comparison criteria available in Table 1. As seen in practice, we chose WAIC (Widely-Applicable Information Criteria) as our main discriminant criteria (Watanabe 2010).
+
+From this perspective, the best model is model2_bis (intercept + prevalence fixed effect + offset) with a 83.4 WAIC, closely followed by model4_bis () (most complete model : intercept + fixed prevalence effect + random site effect + offset) with its 88.0 WAIC. DIC (Deviance information criteria), though described as less informative in our lecture, emphasizes this conclusion, but does not help to discriminate these two options. As the $\Delta WAIC<1$, we cannot select a model with certainty although model 2 bis has the lowest criteria.
+
+We can point out that the offset improve our models fittings as all of our "bis" models which include this Area offset obtained a better WAIC than their offsetless twins.
+
+Model 2 bis and 4 bis ran with 10 000 iterations, 3 chains, 3000 burnin, and a thinning rate of 10.
+
+We will now assess both of these model's estimates in the following section.
+
+# Part 4 : Inference and interpretation of results
+
+Model 2 bis and 4 bis estimates are available in Table 2 and 3.
 
 
+$$
+M_{2 bis} \sim a_{0}= -8.130 ; a{1}=0.015
+$$
+$$
+M_{4 bis} \sim a_{1}= 0.016 ; \mu_{a} =-8.15; \sigma_{a}=0.284
+$$
+The effect of seroprevalence $a1$ we detected are for both model close to the article. Our intercepts are slightly inferior.
+We will then replicate the example the author gave of a 120 tortoises population, in which prevalence increases from 0% to 70%.
+As our "bis" model include an area offset, we will use the mean area value $mean{Area}=29.02$.
 
+###Model 2 bis
 
+With model 2 bis, $120 * e^{-8.13 + log(29.02)}=1.02$ shells per site per year to $120 * e^{-8.13+70*0.015+log(29.02)}=2.93$ shells instead of 4 in the article. These values may not be exactly the same but the order of magnitude is respected. Our estimate minimizes prevalence's explicative power.
 
+###Model 4 bis
 
+With model 4 bis we add a random effect, $120 * e^{-8.13 + log(29.02)+0.284}=1.34$ shells per site per year to $120 * e^{-8.13+70*0.015+log(29.02)}=4.11$ shells instead of 4 in the article. These results also resemble the article's.
 
+Both models lead to the same conclusion : prevalence has a small but significant impact on shell remains per site per year, a proxy of mortality.
 
-# Inference and interpretation of results
+Eventually, our models lead to the same conclusion as the article : prevalence does affect mortality approximated by shell remains, but this effect is slight.
 
+###Frequency models VS Bayesian
 
-# Discussion
+```{r}
+model2bis_fq <- glm(shells~prev, family=poisson, data=data)
+summary(model2bis_fq)
 
-Our result are different from the paper for different reasons: 
--Not taking into account the random effect of year and the inrection of the random effect between year and mean.
-So it's not a ...
-And there is problem of dispersion qu'on peut notamment hypothésé au vu des nombreux 0 dans nos données déjà. 
-Il aurait été pertinent de tester pour l'overdispersion.
-Une autre approche binomiale négative peutêtre ou d'account pour l'effet random aurait pu être intéressante. Ou d'inclure comme l'ont fait les auteurs interactions. 
+model4bis_fq <- glmer(shells~prev+(1|Site), family=poisson, data=data)
+summary(model4bis_fq)
+
+```
+Though estimates values differ, thee order of magnitude is the same between frequentist and Bayesian approach.
+
+#Part 5 :  Discussion
+
+Though our conclusion are similar to those from the article, results are somehow slightly different from the paper for several reasons: 
+
+First, we did not include random effect of year and interaction site*year. We tried to but unfortunately our attempts resulted in a model that did not converge. This can explain a part of the difference, but not much since the authors pointed out these effects were small.
+
+Second, we did not test or assess overdispersion which is likely to impact our result as we mentioned earlier due to numerous 0 values in the shell remain count (Gardner et al. 1995). The authors did mention this issue in their paper. One solution is to use a Negative Binomial distribution (Elston et al. 2001), which we did not try. Our parameters can be biased and their standard deviation underestimated, leading to inappropriate conclusions.
+
+Other limits we should mention relate to model comparison. We used a different criteria of model selection which did not take into account small sample. The authors chose an AIC corrected for small sample size.
+As often in this type of study, more data would have been a great way to improve the results.
 
 cf https://agabrioblog.onrender.com/tutorial/glm2-jags/glm2-jags/ - zero inflated poisson model.
